@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fiche récap chantier — Menuiserie / Agencement</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papier:#F6F4EE; --carte:#FFFFFF; --encre:#221B12; --encre2:#5C5346;
+  --ligne:#DED8CB; --marron:#6E4B33; --marron-f:#4A3021; --pin:#EDE4D3; --rouge:#C22B1E;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--papier);color:var(--encre);font-family:'Public Sans',sans-serif;font-size:13px;padding:0 0 80px}
+.mono{font-family:'IBM Plex Mono',monospace}
+.cartouche{background:var(--marron-f);color:#F3EDE3;padding:22px 26px 18px;border-bottom:5px solid var(--marron)}
+.cartouche h1{font-family:'Archivo',sans-serif;font-stretch:110%;font-weight:800;font-size:24px;margin:0;letter-spacing:.5px;text-transform:uppercase}
+.cartouche .sub{font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.75;margin-top:4px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{font-family:'Archivo',sans-serif;font-weight:600;font-size:12px;padding:8px 14px;border-radius:4px;border:1px solid var(--ligne);background:var(--carte);color:var(--encre);cursor:pointer}
+.btn:hover{border-color:var(--marron)}
+.btn.dark{background:var(--marron);border-color:var(--marron);color:#fff}
+.btn.ghost{background:transparent;border-color:rgba(243,237,227,.35);color:#F3EDE3}
+.btn.ghost:hover{border-color:#F3EDE3}
+.btn:focus-visible{outline:2px solid var(--marron);outline-offset:2px}
+.btn:disabled{opacity:.55;cursor:wait}
+.status{margin-top:10px;padding:9px 12px;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:10px}
+.status.wait{background:rgba(243,237,227,.12);color:#F3EDE3;border:1px dashed rgba(243,237,227,.4)}
+.status.ok{background:#E6EFE2;color:#2F4A2B;border:1px solid #9DB894}
+.status.err{background:#F5E3DC;color:#7A3020;border:1px solid #D9A28E}
+.status-x{margin-left:auto;border:none;background:transparent;color:inherit;font-size:14px;cursor:pointer}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px}
+.carte{background:var(--carte);border:1px solid var(--ligne);border-radius:6px;padding:16px 18px;margin-bottom:14px}
+.carte h2{font-family:'Archivo',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--marron);margin:0 0 12px}
+.grid{display:flex;flex-wrap:wrap;gap:10px}
+.fld{display:flex;flex-direction:column;gap:3px;flex:1;min-width:140px}
+.fld.fix{flex:0 0 auto}
+.fld-l{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--encre2)}
+.inp{border:1px solid var(--ligne);border-radius:4px;padding:7px 9px;font:inherit;background:#FDFCF9;color:var(--encre);width:100%}
+.inp:focus{outline:2px solid var(--marron);outline-offset:-1px}
+select.inp.ad-val{color:var(--rouge);font-weight:600}
+textarea.inp{resize:vertical;min-height:60px;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.5}
+.inp.bulle{border-style:dashed;background:#FBF7EE;font-style:italic}
+select.inp option.opt-add{font-style:italic;color:var(--marron)}
+.zone{border:1px solid var(--ligne);border-radius:6px;background:var(--carte);margin-bottom:14px;overflow:hidden}
+.zone-head{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--pin);cursor:pointer}
+.zone-head input{font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:1px;border:none;background:transparent;color:var(--encre);flex:1;min-width:80px}
+.zone-head input:focus{outline:1px dashed var(--marron)}
+.zone-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--marron-f);white-space:nowrap}
+.chev{font-size:11px;color:var(--encre2)}
+.meuble{border-top:1px dashed var(--ligne);padding:14px 16px}
+.m-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.m-code{width:70px;flex:0 0 auto;border:1px solid var(--ligne);border-radius:3px;background:var(--marron);color:#fff;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;text-align:center;padding:4px 4px}
+.m-code::placeholder{color:rgba(255,255,255,.55)}
+.m-head .m-nom{flex:1;min-width:160px;border:none;border-bottom:2px solid var(--pin);background:transparent;
+  font-family:'Archivo',sans-serif;font-weight:700;font-size:16px;color:var(--encre);padding:4px 2px}
+.m-head .m-nom::placeholder{color:#B8AF9F;font-weight:600}
+.m-head .m-nom:focus{outline:none;border-bottom-color:var(--marron)}
+.badge-liv{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;background:var(--marron);color:#fff;border-radius:3px;padding:3px 8px;white-space:nowrap}
+.badge-liv.ad{background:var(--rouge)}
+.mini{font-size:11px;padding:4px 9px}
+.btn[disabled]{opacity:.32;cursor:not-allowed}
+.btn.mini[title^="Monter"],.btn.mini[title^="Descendre"]{font-weight:700;min-width:28px}
+.row-actions{margin-left:auto;display:flex;gap:6px}
+.bloc{border-left:3px solid var(--pin);padding:8px 0 8px 12px;margin-top:10px}
+.bloc-t{font-family:'Archivo',sans-serif;font-weight:700;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--marron);margin-bottom:6px}
+.zone-foot{padding:10px 16px;border-top:1px dashed var(--ligne);display:flex;gap:8px}
+.swch{display:flex;align-items:center;gap:8px;padding:7px 0}
+.swch input{width:16px;height:16px;accent-color:var(--marron)}
+.chkrow{display:flex;gap:14px;align-items:center;padding:7px 0;flex-wrap:wrap}
+.chkrow label{display:flex;gap:5px;align-items:center;font-size:12px}
+.chkrow input{width:15px;height:15px;accent-color:var(--marron)}
+.ligne-item{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap}
+.sous-item{border:1px dashed var(--ligne);border-radius:6px;padding:10px 12px 4px;margin-bottom:10px;background:#FBFAF6}
+/* ================= IMPRESSION (dense, police agrandie) ================= */
+#sheet{display:none}
+@page{margin:10mm}
+@media print{
+  .no-print{display:none!important}
+  body{background:#fff;padding:0}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #sheet{display:block;color:#221B12}
+  .p-cartouche{background:none;color:#221B12;padding:0 2px 6px;border-bottom:2.5px solid #221B12;margin-bottom:8px;display:flex;justify-content:space-between;gap:18px;align-items:flex-end}
+  .p-cartouche h1{font-family:'Archivo',sans-serif;font-size:22px;font-weight:800;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:2px}
+  .p-meta{font-family:'Archivo',sans-serif;font-size:12.5px;line-height:1.65}
+  .p-meta .p-lab{color:#5C5346;font-weight:400}
+  .p-meta b{font-weight:800;font-size:13px}
+  .p-acces{display:inline-block;font-weight:800;font-size:13px;border:2px solid #221B12;border-radius:4px;padding:1px 8px;margin-top:2px}
+  .p-acces.ad{border-color:#C22B1E;color:#C22B1E}
+  .p-gen{border:1px solid #DED8CB;border-top:none;background:#FBF9F4;padding:7px 12px;white-space:pre-line;font-size:10px;line-height:1.45;margin-bottom:8px;border-radius:0 0 6px 6px}
+  .p-zone{font-family:'Archivo',sans-serif;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:1px;background:#EDE4D3;border-left:5px solid #6E4B33;padding:5px 10px;margin:8px 0 5px;border-radius:3px}
+  .p-meuble{border:1px solid #DED8CB;border-radius:6px;margin-bottom:5px;break-inside:avoid;overflow:hidden}
+  .p-mhead{display:flex;align-items:center;gap:8px;background:#F6F4EE;padding:4px 10px;border-bottom:1px solid #DED8CB}
+  .p-code{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;background:#6E4B33;color:#fff;border-radius:3px;padding:1px 6px}
+  .p-nom{font-family:'Archivo',sans-serif;font-weight:700;font-size:13px}
+  .p-type{color:#5C5346;font-size:10px}
+  .p-liv{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;border:1px solid #6E4B33;color:#6E4B33;border-radius:3px;padding:1px 6px;white-space:nowrap}
+  .p-liv.ad{border-color:#C22B1E;color:#C22B1E}
+  .p-body{display:flex;flex-wrap:wrap;padding:2px 8px 4px}
+  .p-sec{flex:1 1 31%;min-width:31%;padding:3px 8px 2px 0}
+  .p-sec.full{flex:1 1 100%;min-width:100%}
+  .p-sec-t{font-family:'Archivo',sans-serif;font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6E4B33;border-bottom:1px solid #EDE4D3;margin-bottom:2px;padding-bottom:1px}
+  .p-line{font-size:11.5px;line-height:1.5}
+  .p-lab{color:#5C5346;font-weight:400}
+  .p-val{font-weight:700;color:#1A140D}
+  .p-mono{font-family:'IBM Plex Mono',monospace;font-size:10px;white-space:pre-line;line-height:1.4}
+  .p-elem{border-top:1px dashed #DED8CB;margin:0 8px 3px;padding-top:2px}
+  .p-elem-t{font-family:'Archivo',sans-serif;font-weight:700;font-size:11px;padding:2px 0 0}
+  .ad{color:#C22B1E;font-weight:700}
+  .p-note{color:#C22B1E;font-weight:700;font-style:normal}
+  .p-notes-box{border:1.5px solid #C22B1E;border-radius:4px;background:#FDF3F2;padding:4px 8px}
+  .p-notes-box .p-sec-t{color:#C22B1E;border-bottom-color:#F3C9C4}
+  .p-notes-box .p-mono{color:#A81F14;font-weight:700;font-size:10.5px}
+  .p-data{page-break-before:always;border-top:2px solid #DED8CB;margin-top:8px;padding-top:5px}
+  .p-data-t{font-family:'Archivo',sans-serif;font-size:8px;color:#8A8272;letter-spacing:.5px;margin-bottom:3px}
+  .p-data-b{font-family:'IBM Plex Mono',monospace;font-size:4pt;line-height:1.15;color:#B5AE9F;word-break:break-all;white-space:normal}
+}
+@media(max-width:640px){.grid{flex-direction:column}.fld,.fld.fix{min-width:100%;width:100%!important}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <header class="cartouche">
+    <h1>Fiche récap chantier</h1>
+    <div class="sub" id="subTitle">AGENCEMENT · MENUISERIE — nouveau chantier</div>
+    <div class="toolbar">
+      <button class="btn dark" id="btnPdf">Importer devis PDF (1 ou plusieurs)</button>
+      <button class="btn dark" id="btnFiche">Importer une fiche PDF</button>
+      <button class="btn dark" id="btnPrint">Imprimer / PDF</button>
+      <button class="btn ghost" id="btnExportJson">Exporter JSON</button>
+      <button class="btn ghost" id="btnImportJson">Importer JSON</button>
+      <input type="file" id="fileJson" accept=".json" style="display:none">
+      <input type="file" id="filePdf" accept=".pdf,application/pdf" multiple style="display:none">
+      <input type="file" id="fileFiche" accept=".pdf,application/pdf" style="display:none">
+    </div>
+    <div id="statusBox"></div>
+    <div id="resumeBox"></div>
+  </header>
+
+  <div class="wrap">
+    <section class="carte">
+      <h2>Chantier</h2>
+      <div class="grid">
+        <label class="fld fix" style="width:150px"><span class="fld-l">Date</span><input class="inp" type="date" id="c_date"></label>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <label class="fld"><span class="fld-l">Nom du chantier</span><input class="inp" id="c_nom"></label>
+        <label class="fld"><span class="fld-l">Client</span><input class="inp" id="c_client"></label>
+        <label class="fld fix" style="width:150px"><span class="fld-l">N° de dossier</span><input class="inp mono" id="c_dossier" placeholder="ex : 00697"></label>
+        <label class="fld fix" style="width:190px"><span class="fld-l">N° de devis</span><input class="inp mono" id="c_devis" placeholder="ex : DEV-20260126-00697-V2"></label>
+        <label class="fld"><span class="fld-l">Adresse chantier</span><input class="inp" id="c_adresse"></label>
+        <label class="fld"><span class="fld-l">Contact (saisie manuelle uniquement)</span><input class="inp" id="c_contact"></label>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="fld fix" style="width:210px"><span class="fld-l">Accès chantier</span><span id="c_acces_slot"></span></div>
+        <label class="fld"><span class="fld-l">Précision accès (étage, largeur passage, stationnement...)</span><input class="inp" id="c_accesPrecision"></label>
+      </div>
+    </section>
+
+    <section class="carte">
+      <h2>Généralités atelier (une ligne par point)</h2>
+      <textarea class="inp" rows="4" id="c_generalites" placeholder="Charnières Blum...&#10;Huile Rubio...&#10;LED verticales dans les joues..."></textarea>
+    </section>
+
+    <div id="zonesBox"></div>
+    <button class="btn dark" id="btnAddZone">+ Ajouter une zone / pièce</button>
+  </div>
+</div>
+
+<div id="sheet"></div>
+
+<script>
+/* ================= CONSTANTES ================= */
+const APP_VERSION = "v8";
+const AD = "À définir";
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const deep = (o) => JSON.parse(JSON.stringify(o));
+
+const DEFAULT_REFS = {
+  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
+  elementTypes: [AD,"Tablette","Bureau","Miroir","Piètement"],
+  livraisons: [AD,"Monté","Partiellement monté","À plat (démonté)"],
+  acces: ["Plain-pied","Escalier","Ascenseur","Monte-charge","Grue nécessaire","Autre"],
+  caissonConstr: [AD,"Standard IKEA","Standard à recouper","Sur mesure"],
+  caissonMat: [AD,"Mélaminé","Aggloméré plaqué","MDF","Chêne massif","Multiplex / CP","Autre"],
+  facadeTypes: [AD,"Simple","Cadre","Cadre + remplissage","Rainurée","Cintrée","Vitrée","Autre"],
+  facadeMat: [AD,"MDF","Pin massif","Chêne massif","Mélaminé","Plaqué bois","Stratifié","CP marine","Autre"],
+  remplissageTypes: [AD,"Tissu","Tapisserie","Cannage","Miroir","Autre"],
+  miroirTeintes: [AD,"Clair","Vieilli"],
+  miroirPoses: [AD,"Percé","Filmé","Avec cadre"],
+  miroirEps: [AD,"4 mm","6 mm","8 mm"],
+  finitions: [AD,"Brut","Peint","Vernis","Huilé (Rubio)"],
+  vernisTypes: [AD,"Mat","Satiné","Brillant","Blanchi"],
+  huileTeintes: [AD,"Pure","White","Natural","Smoke","Black","Chocolate"],
+  fournisseurs: [AD,"Unilin","Egger","Polyrey","Fenix"],
+  peintureFournisseurs: [AD,"Ressource","Little Greene","Farrow & Ball","Tollens"],
+  peintureAspects: [AD,"Mat","Satiné","Brillant","Velours"],
+  tissuFournisseurs: [AD,"Elitis","Pierre Frey","Casamance"],
+  matRefs: [AD],
+  quincSpecTypes: [AD,"Charnière noire","Charnière invisible","Charnière 165°","Rail Hawa escamotable","Rail Hawa coulissant","Système escamotable","Porte-manteau escamotable","Coulissant à galandage","Vérin / piston","Serrure / fermeture","Passe-câble","Autre"],
+  quincFinitions: [AD,"Nickelé","Noir","Inox","Laiton"],
+  pdtMat: [AD,"Dekton","Corian","Marbre","Granit","Quartz","Céramique","Inox","Bois massif","Stratifié","Autre"],
+  pdtFournisseurs: [AD,"Granico","HMS","Autre"],
+  electroFournisseurs: [AD,"Cojer","Client direct","Autre"],
+  poigneeTypes: [AD,"Bouton de porte","Prise de doigt","Push-pull","Fournie par le client","Sans poignée"],
+  poigneeFinitions: [AD,"Laiton","Noir mat","Inox","Chromé","Autre"],
+  pushPullCouleurs: [AD,"Noir","Blanc","Gris"],
+  priseTypes: [AD,"Pente à 30°","Profilé"],
+  profilRefs: [AD],
+  boutonRefs: [AD,"Viefe","LMC","Corston"],
+  bequillages: [AD],
+  tringleFinitions: [AD,"Laiton","Inox","Noir"],
+  ledCouleurs: [AD,"Blanc chaud 2700K","Blanc neutre 4000K","Blanc froid 6000K","RGB / teinte variable"],
+  ledEmpl: [AD,"Joues à la verticale","Sous meubles hauts","Intérieur niche","Corniche","Sous étagères","Autre"],
+  quincSpecRefs: [AD],
+};
+const DEFAULT_CASCADES = {
+  panneaux: { "Unilin": [AD,"W980"], "Egger": [AD,"U222"], "Polyrey": [AD], "Fenix": [AD] },
+  peintures: { "Ressource": [AD,"RMDV49 Marron d'inde","SL01 Neige"], "Little Greene": [AD], "Farrow & Ball": [AD], "Tollens": [AD] },
+  tissus: { "Elitis": [AD,"ABACA VP 983 05"], "Pierre Frey": [AD], "Casamance": [AD] },
+  quincSpecDetails: {
+    "Charnière noire": [AD], "Charnière invisible": [AD,"Tectus"], "Charnière 165°": [AD],
+    "Rail Hawa escamotable": [AD,"Hawa Concepta"], "Rail Hawa coulissant": [AD,"Hawa Junior"],
+    "Système escamotable": [AD], "Porte-manteau escamotable": [AD], "Coulissant à galandage": [AD],
+    "Vérin / piston": [AD], "Serrure / fermeture": [AD], "Passe-câble": [AD], "Autre": [AD],
+  },
+  planTravail: { "Granico": [AD], "HMS": [AD], "Autre": [AD] },
+};
+const MAT_SANS_FINITION = [AD,"—","Mélaminé","Stratifié","CP marine"];
+/* Matières façade avec cascade fournisseur -> réf (mêmes bases de panneaux) */
+const MAT_CASCADE = ["Mélaminé","Stratifié"];
+const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Manteau de cheminée","Console cache-clim","Piètement"];
+const PDT_OPTIONS = ["Rainurage","Cuve","Robinet","Prises","Plaque"];
+const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Lave-vaisselle","Micro-ondes","Évier","Cave à vin","Autre"];
+const estPdt = (m) => m.type === "Plan de travail";
+const estCuisine = (m) => m.type === "Cuisine";
+const MIROIR_SPECS = ["Filmé","Perçage","Arrondi","Biseauté","Cadre"];
+/* Sections masquées selon le type d'agencement (cf. arbre des choix) */
+const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Plan de travail"];
+const SANS_LED = ["Miroir","Piètement","Manteau de cheminée","Banquette","Plan de travail"];
+const SANS_QUINC = ["Miroir","Piètement","Manteau de cheminée"];
+const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette","Bureau"];
+/* Accès unifié aux déclinaisons de matière : mêmes choix en Caisson et en Façade */
+const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect" };
+const K_CAISSON = { mat:"caissonMat", four:"caissonFournisseur", ref:"caissonRef", mdf:"caissonMdfFinitions", fin:"caissonFinition", vernis:"caissonVernisType", huile:"caissonHuileTeinte", pFour:"caissonPeintureFournisseur", pRef:"caissonPeintureRef", pAsp:"caissonPeintureAspect" };
+
+const newQuinc = () => ({ id: uid(), cat: AD, detail: AD, finition: AD, ref: "" });
+const newMeuble = () => ({
+  id: uid(), code: "", nom: "", type: AD, livraison: AD,
+  elements: [],
+  caissonConstr: AD, caissonMat: AD, caissonFournisseur: AD, caissonRef: AD, caissonNote: "",
+  caissonMdfFinitions: [], caissonFinition: AD, caissonVernisType: AD, caissonHuileTeinte: AD,
+  caissonPeintureFournisseur: AD, caissonPeintureRef: AD, caissonPeintureAspect: AD,
+  facadeType: AD, facadeMat: AD, facadeFournisseur: AD, facadeRef: AD, facadeNote: "",
+  remplissageType: AD, tissuFournisseur: AD, tissuRef: AD, miroirTeinte: AD, miroirPose: AD,
+  miroirEp: AD, miroirSpecs: [],
+  mdfFinitions: [], finition: AD, vernisType: AD, huileTeinte: AD,
+  peintureFournisseur: AD, peintureRef: AD, peintureAspect: AD,
+  quincSpec: false, quincailleries: [], quincNote: "",
+  pdtMat: AD, pdtFournisseur: AD, pdtRef: AD, pdtOptions: [], pdtRefs: {}, pdtNote: "",
+  electro: false, electroFournisseur: AD, electroElements: [], electroRefs: {}, electroNote: "",
+  poigneeType: AD, poigneeRef: "", poigneeFinition: AD, poigneePrise: AD, profilRef: AD,
+  bequillageRef: AD, nbPoignees: "", poigneeNote: "",
+  tringle: false, tringleFinition: AD,
+  led: false, ledCouleur: AD, ledEmpl: AD,
+  composition: "", notes: "",
+});
+const newElement = () => Object.assign(newMeuble(), { type: AD });
+const newZone = (nom) => ({ id: uid(), nom: nom || "", meubles: [newMeuble()], open: true });
+
+/* ================= ÉTAT ================= */
+let state = {
+  chantier: { nom:"", client:"", dossier:"", devis:"", adresse:"", contact:"", date:"", acces:"Plain-pied", accesPrecision:"" },
+  generalites: "",
+  zones: [newZone("")],
+  refs: deep(DEFAULT_REFS),
+  cascades: deep(DEFAULT_CASCADES),
+  usage: {},
+};
+function saveRefs(){
+  try { localStorage.setItem("ficheChantierBase",
+    JSON.stringify({ refs: state.refs, cascades: state.cascades, usage: state.usage, seen: DEFAULT_REFS })); } catch(e){}
+}
+function loadRefs(){
+  try {
+    const saved = JSON.parse(localStorage.getItem("ficheChantierBase"));
+    if (!saved) return;
+    /* « seen » = choix par défaut connus lors de la dernière sauvegarde. Tout choix par défaut
+       AJOUTÉ depuis (nouvelle version de l'outil) est réintégré ; ceux que l'utilisateur a
+       volontairement retirés ne reviennent pas. */
+    const seen = saved.seen || {};
+    if (saved.refs) for (const k in state.refs){
+      if (!Array.isArray(saved.refs[k]) || !saved.refs[k].length) continue;
+      const liste = dedupeListe(saved.refs[k], DEFAULT_REFS[k]);
+      /* Sans marqueur « seen » (base enregistrée par une version antérieure), on réintègre tous les
+         choix par défaut manquants : c'est le rattrapage unique qui fait apparaître les nouveautés. */
+      const connus = Array.isArray(seen[k]) ? seen[k] : [];
+      (DEFAULT_REFS[k] || []).forEach(v => {
+        if (!memeChoix(connus, v) && !memeChoix(liste, v)) liste.push(v);
+      });
+      state.refs[k] = dedupeListe(liste, DEFAULT_REFS[k]);
+    }
+    if (saved.cascades) for (const g in state.cascades){
+      if (saved.cascades[g]) for (const f in saved.cascades[g]){
+        if (Array.isArray(saved.cascades[g][f]) && saved.cascades[g][f].length)
+          state.cascades[g][f] = dedupeListe(saved.cascades[g][f], (DEFAULT_CASCADES[g] || {})[f]);
+      }
+    }
+    if (saved.usage) state.usage = saved.usage;
+  } catch(e){}
+}
+function cascadeListe(group, key){
+  if (!key || key === AD) return [AD];
+  if (!state.cascades[group]) state.cascades[group] = {};
+  if (!state.cascades[group][key]) state.cascades[group][key] = [AD];
+  return state.cascades[group][key];
+}
+loadRefs();
+
+/* ---- Sauvegarde automatique de la fiche en cours (localStorage du navigateur) ---- */
+const AUTOKEY = "ficheChantierAuto";
+let autoTimer = null;
+function saveAutoNow(){
+  if (resumeVisible()){
+    if (ficheEstVide()) return;   /* la fiche affichée est vierge : ne pas écraser la sauvegarde proposée */
+    hideResume();                 /* saisie réelle : la nouvelle fiche remplace l'ancienne sauvegarde */
+  }
+  try {
+    localStorage.setItem(AUTOKEY, JSON.stringify({
+      v: APP_VERSION, savedAt: new Date().toISOString(),
+      chantier: state.chantier, generalites: state.generalites, zones: state.zones,
+    }));
+  } catch(e){}
+}
+function resumeVisible(){ const b = document.getElementById("resumeBox"); return !!(b && b.firstChild); }
+function hideResume(){ const b = document.getElementById("resumeBox"); if (b) b.innerHTML = ""; }
+function peekAuto(){
+  try {
+    const d = JSON.parse(localStorage.getItem(AUTOKEY));
+    if (!d) return null;
+    const nonVide = (d.zones || []).some(z => z.nom || (z.meubles || []).some(m => m.nom || m.code || (m.type && m.type !== AD)))
+      || (d.chantier && (d.chantier.nom || d.chantier.client || d.chantier.adresse || d.chantier.date || d.chantier.contact)) || d.generalites;
+    return nonVide ? d : null;
+  } catch(e){ return null; }
+}
+function initResume(){
+  const d = peekAuto();
+  if (!d) return;
+  const quand = d.savedAt ? new Date(d.savedAt).toLocaleString("fr-FR") : "";
+  document.getElementById("resumeBox").appendChild(el("div", { class: "status ok" },
+    "Une fiche est sauvegardée dans ce navigateur" +
+      (d.chantier && (d.chantier.nom || d.chantier.adresse) ? " — " + (d.chantier.nom || d.chantier.adresse) : "") +
+      (quand ? " (enregistrée le " + quand + ")" : "") + ". ",
+    el("button", { class: "btn mini", style: "margin-left:8px", onclick: () => {
+      loadAuto(); renderChantier(); renderZones(); hideResume();
+      setStatus("ok", "Fiche précédente reprise — la sauvegarde continue automatiquement.");
+    } }, "Reprendre cette fiche"),
+    el("button", { class: "btn mini", style: "margin-left:6px", onclick: () => {
+      try { localStorage.removeItem(AUTOKEY); } catch(e){}
+      hideResume();
+    } }, "Repartir de zéro (efface la sauvegarde)")));
+}
+function saveAuto(){ clearTimeout(autoTimer); autoTimer = setTimeout(saveAutoNow, 400); }
+function loadAuto(){
+  try {
+    const d = JSON.parse(localStorage.getItem(AUTOKEY));
+    if (!d) return false;
+    state.chantier = Object.assign({ nom:"", client:"", adresse:"", contact:"", date:"", acces:"Plain-pied", accesPrecision:"" }, d.chantier);
+    state.generalites = typeof d.generalites === "string" ? d.generalites : "";
+    if (Array.isArray(d.zones) && d.zones.length){
+      state.zones = d.zones.map(z => ({ id: uid(), nom: z.nom || "", open: z.open !== false, meubles: (z.meubles || []).map(reviveMeuble) }));
+    }
+    return true;
+  } catch(e){ return false; }
+}
+function ficheEstVide(){
+  const c = state.chantier;
+  return !c.nom && !c.client && !c.adresse && !c.date && !c.contact && !state.generalites &&
+    state.zones.every(z => !z.nom && z.meubles.every(m => !m.nom && !m.code && m.type === AD));
+}
+document.addEventListener("input", saveAuto);
+document.addEventListener("change", saveAuto);
+document.addEventListener("click", saveAuto);
+window.addEventListener("beforeunload", saveAutoNow);
+
+function bump(usageKey, v){
+  if (!usageKey || !v || v === AD || v === "—") return;
+  if (!state.usage[usageKey]) state.usage[usageKey] = {};
+  state.usage[usageKey][v] = (state.usage[usageKey][v] || 0) + 1;
+  saveRefs();
+}
+function sortedList(list, usageKey){
+  const u = (usageKey && state.usage[usageKey]) || {};
+  const head = list.filter(v => v === AD || v === "—");
+  const rest = list.filter(v => v !== AD && v !== "—");
+  const idx = new Map(rest.map((v, i) => [v, i]));
+  rest.sort((a, b) => ((u[b] || 0) - (u[a] || 0)) || (idx.get(a) - idx.get(b)));
+  return head.concat(rest);
+}
+
+/* ================= HELPERS DOM ================= */
+function el(tag, attrs, ...children){
+  const n = document.createElement(tag);
+  if (attrs) for (const k in attrs){
+    if (k === "class") n.className = attrs[k];
+    else if (k === "style") n.setAttribute("style", attrs[k]);
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), attrs[k]);
+    else if (k === "checked") n.checked = !!attrs[k];
+    else if (k === "disabled"){ if (attrs[k]) n.setAttribute("disabled", "disabled"); }
+    else if (k === "value") n.value = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  }
+  children.flat(Infinity).forEach(c => { if (c == null || c === "") return; n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return n;
+}
+function field(label, node, width){
+  return el("label", { class: "fld" + (width ? " fix" : ""), style: width ? "width:" + width : "" },
+    el("span", { class: "fld-l" }, label), node);
+}
+function bulle(m, key){
+  return field("💬 Autres possibilités / précisions",
+    el("input", { class: "inp bulle", value: m[key] || "", placeholder: "noter librement d'autres options…",
+      oninput: e => { m[key] = e.target.value; } }));
+}
+function makeSelect(listKeyOrGet, value, onPick, usageKey){
+  const getList = typeof listKeyOrGet === "string" ? () => state.refs[listKeyOrGet] : listKeyOrGet;
+  const uKey = usageKey || (typeof listKeyOrGet === "string" ? listKeyOrGet : "");
+  const sel = el("select", { class: "inp" });
+  const paint = () => { sel.classList.toggle("ad-val", sel.value === AD); };
+  const rebuild = () => {
+    sel.innerHTML = "";
+    const list = getList() || [];
+    let opts = sortedList(list.slice(), uKey);
+    if (!opts.includes(AD)) opts.unshift(AD);
+    if (!opts.includes("—")) opts.splice(opts.indexOf(AD) + 1, 0, "—");
+    if (value && !opts.includes(value)){
+      const eq = memeChoix(opts, value);
+      if (eq) value = eq;               /* même choix, orthographe différente : on s'aligne */
+      else opts.unshift(value);
+    }
+    opts.forEach(o => sel.appendChild(el("option", { value: o }, o)));
+    sel.appendChild(el("option", { value: "__add__", class: "opt-add" }, "＋ Ajouter un choix…"));
+    sel.appendChild(el("option", { value: "__del__", class: "opt-add" }, "－ Retirer un choix…"));
+    sel.value = value;
+    paint();
+  };
+  rebuild();
+  sel.addEventListener("change", () => {
+    if (sel.value === "__add__"){
+      const v = (prompt("Nouveau choix à ajouter dans la liste (conservé dans votre base) :") || "").trim();
+      if (v){
+        const list = getList();
+        const exist = memeChoix(list, v);
+        if (exist) value = exist;          /* déjà présent (accents/casse près) : on le réutilise */
+        else { list.push(v); value = v; }
+        bump(uKey, value);
+        saveRefs();
+      }
+      rebuild(); onPick(value);
+    } else if (sel.value === "__del__"){
+      const list = getList();
+      if (list.length <= 1){ alert("Impossible : la liste doit garder au moins un choix."); rebuild(); return; }
+      const menu = list.map((o, i) => (i + 1) + ". " + o).join("\n");
+      const rep = (prompt("Quel choix retirer définitivement de la base ?\nTapez son numéro :\n\n" + menu) || "").trim();
+      const idx = parseInt(rep, 10) - 1;
+      if (!isNaN(idx) && idx >= 0 && idx < list.length){
+        const removed = list.splice(idx, 1)[0];
+        saveRefs();
+        if (value === removed) value = list[0];
+      }
+      rebuild(); onPick(value);
+    } else {
+      value = sel.value;
+      bump(uKey, value);
+      paint();
+      onPick(value);
+    }
+  });
+  return sel;
+}
+
+/* ================= RENDU ================= */
+const zonesBox = document.getElementById("zonesBox");
+const estSimple = (m) => TYPES_SIMPLES.includes(m.type);
+const estMiroir = (m) => m.type === "Miroir";
+const matAFinir = (mat) => !MAT_SANS_FINITION.includes(mat);
+
+function subTitle(){
+  document.getElementById("subTitle").textContent =
+    "AGENCEMENT · MENUISERIE — " + (state.chantier.nom || state.chantier.adresse || "nouveau chantier") + " · " + APP_VERSION;
+}
+function renderChantier(){
+  const c = state.chantier;
+  ["nom","client","dossier","devis","date","adresse","contact","accesPrecision"].forEach(k => {
+    const inp = document.getElementById("c_" + k);
+    inp.value = c[k] || "";
+    inp.oninput = () => { c[k] = inp.value; if (k === "nom" || k === "adresse") subTitle(); };
+  });
+  const slot = document.getElementById("c_acces_slot");
+  slot.innerHTML = "";
+  slot.appendChild(makeSelect("acces", c.acces || "Plain-pied", v => { c.acces = v; }));
+  const gen = document.getElementById("c_generalites");
+  gen.value = state.generalites;
+  gen.oninput = () => { state.generalites = gen.value; };
+  subTitle();
+}
+function renderZones(){
+  zonesBox.innerHTML = "";
+  state.zones.forEach(z => zonesBox.appendChild(renderZone(z)));
+}
+function renderZone(z){
+  const nomInput = el("input", { value: z.nom, placeholder: "NOM DE LA ZONE (Suite 1, Cuisine...)",
+    onclick: e => e.stopPropagation(), oninput: e => { z.nom = e.target.value; } });
+  const head = el("div", { class: "zone-head", onclick: () => { z.open = !z.open; renderZones(); } },
+    el("span", { class: "chev" }, z.open ? "▼" : "►"),
+    nomInput,
+    el("span", { class: "zone-count" }, z.meubles.length + " agencement" + (z.meubles.length > 1 ? "s" : "")),
+    el("button", { class: "btn mini", onclick: e => { e.stopPropagation(); if (confirm("Supprimer cette zone et ses agencements ?")){ state.zones = state.zones.filter(x => x.id !== z.id); renderZones(); } } }, "Supprimer"));
+  const sec = el("section", { class: "zone" }, head);
+  if (z.open){
+    z.meubles.forEach(m => sec.appendChild(renderMeuble(z, m)));
+    sec.appendChild(el("div", { class: "zone-foot" },
+      el("button", { class: "btn", onclick: () => { z.meubles.push(newMeuble()); renderZones(); } }, "+ Ajouter un agencement")));
+  }
+  return sec;
+}
+
+/* ---- Corps commun : mêmes blocs pour un agencement OU un élément intégré ---- */
+function checkboxRow(label, options, m, key, rerender){
+  return el("div", { class: "chkrow" }, el("span", { class: "fld-l" }, label),
+    options.map(o =>
+      el("label", {},
+        el("input", { type: "checkbox", checked: m[key].includes(o),
+          onchange: e => {
+            if (e.target.checked){ if (!m[key].includes(o)) m[key].push(o); }
+            else m[key] = m[key].filter(x => x !== o);
+            rerender();
+          } }),
+        el("span", {}, o))));
+}
+/* Cases à cocher avec, sous chaque case cochée, un champ « réf. » libre */
+function checkboxRowRefs(label, options, m, key, refKey, rerender, ph){
+  if (!m[refKey] || typeof m[refKey] !== "object") m[refKey] = {};
+  return el("div", {},
+    el("div", { class: "chkrow" }, el("span", { class: "fld-l" }, label),
+      options.map(o =>
+        el("label", {},
+          el("input", { type: "checkbox", checked: m[key].includes(o),
+            onchange: e => {
+              if (e.target.checked){ if (!m[key].includes(o)) m[key].push(o); }
+              else { m[key] = m[key].filter(x => x !== o); delete m[refKey][o]; }
+              rerender();
+            } }),
+          el("span", {}, o)))),
+    m[key].length
+      ? el("div", { class: "grid", style: "margin-top:6px" },
+          m[key].map(o => field("Réf. " + o.toLowerCase(),
+            el("input", { class: "inp", value: m[refKey][o] || "", placeholder: ph || "référence, modèle, coloris...",
+              oninput: e => { m[refKey][o] = e.target.value; } }), "220px")))
+      : null);
+}
+/* Plan de travail : matière, fournisseur + réf, options d'usinage — mêmes choix partout */
+function planTravailForm(m, rerender){
+  const pc = [
+    field("Matière", makeSelect("pdtMat", m.pdtMat, v => { m.pdtMat = v; }, "pdtMat"), "170px"),
+    field("Fournisseur", makeSelect("pdtFournisseurs", m.pdtFournisseur,
+      v => { m.pdtFournisseur = v; m.pdtRef = AD; rerender(); }, "pdtFournisseurs"), "170px"),
+  ];
+  if (m.pdtFournisseur !== AD && m.pdtFournisseur !== "—"){
+    pc.push(field("Réf. " + m.pdtFournisseur, makeSelect(() => cascadeListe("planTravail", m.pdtFournisseur),
+      m.pdtRef, v => { m.pdtRef = v; }, "planTravail." + m.pdtFournisseur), "190px"));
+  }
+  pc.push(el("div", { class: "fld", style: "min-width:100%" },
+    checkboxRowRefs("Usinages / équipements :", PDT_OPTIONS, m, "pdtOptions", "pdtRefs", rerender,
+      "réf., dimension, modèle...")));
+  pc.push(bulle(m, "pdtNote"));
+  return pc;
+}
+/* Déclinaisons d'une matière — IDENTIQUES quelle que soit la section (K = jeu de champs Caisson ou Façade) */
+function declMatiereForm(arr, m, K, rerender){
+  const mat = m[K.mat];
+  if (MAT_CASCADE.includes(mat)){
+    arr.push(field("Fournisseur", makeSelect("fournisseurs", m[K.four],
+      v => { m[K.four] = v; m[K.ref] = AD; rerender(); }, "fournisseurs"), "160px"));
+    if (m[K.four] !== AD && m[K.four] !== "—"){
+      arr.push(field("Réf. " + m[K.four], makeSelect(() => cascadeListe("panneaux", m[K.four]),
+        m[K.ref], v => { m[K.ref] = v; }, "panneaux." + m[K.four]), "170px"));
+    }
+    return;
+  }
+  if (mat === AD || mat === "—") return;
+  const peinture = () => {
+    arr.push(field("Fournisseur peinture", makeSelect("peintureFournisseurs", m[K.pFour],
+      v => { m[K.pFour] = v; m[K.pRef] = AD; rerender(); }, "peintureFournisseurs"), "180px"));
+    if (m[K.pFour] !== AD && m[K.pFour] !== "—"){
+      arr.push(field("Réf. " + m[K.pFour], makeSelect(() => cascadeListe("peintures", m[K.pFour]),
+        m[K.pRef], v => { m[K.pRef] = v; }, "peintures." + m[K.pFour]), "200px"));
+    }
+    arr.push(field("Aspect (mat / satiné / brillant)",
+      makeSelect("peintureAspects", m[K.pAsp], v => { m[K.pAsp] = v; }, "peintureAspects"), "180px"));
+  };
+  if (mat === "MDF"){
+    arr.push(el("div", { class: "fld", style: "min-width:100%" },
+      checkboxRow("Finition MDF :", ["Brut","Apprêté","Peint"], m, K.mdf, rerender)));
+    if (m[K.mdf].includes("Peint")) peinture();
+  } else if (matAFinir(mat)){
+    arr.push(field("Finition", makeSelect("finitions", m[K.fin], v => { m[K.fin] = v; rerender(); }), "140px"));
+    if (m[K.fin] === "Peint") peinture();
+    if (m[K.fin] === "Vernis") arr.push(field("Type de vernis", makeSelect("vernisTypes", m[K.vernis], v => { m[K.vernis] = v; }), "150px"));
+    if (m[K.fin] === "Huilé (Rubio)") arr.push(field("Teinte d'huile", makeSelect("huileTeintes", m[K.huile], v => { m[K.huile] = v; }), "160px"));
+  } else {
+    arr.push(field("Réf. / décor", makeSelect("matRefs", m[K.ref], v => { m[K.ref] = v; }), "180px"));
+  }
+}
+function renderCorps(m, rerender){
+  const nodes = [];
+
+  /* ÉLECTROMÉNAGER — première ligne pour une cuisine */
+  if (estCuisine(m)){
+    const ec = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+      el("input", { type: "checkbox", checked: m.electro, onchange: e => { m.electro = e.target.checked; rerender(); } }),
+      el("span", {}, "Électroménagers")) ];
+    if (m.electro){
+      ec.push(field("Fournisseur", makeSelect("electroFournisseurs", m.electroFournisseur,
+        v => { m.electroFournisseur = v; }, "electroFournisseurs"), "180px"));
+      ec.push(el("div", { class: "fld", style: "min-width:100%" },
+        checkboxRowRefs("Éléments fournis :", ELECTRO_ELEMENTS, m, "electroElements", "electroRefs", rerender,
+          "marque, modèle, réf...")));
+      ec.push(bulle(m, "electroNote"));
+    }
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Électroménager"), el("div", { class: "grid" }, ec)));
+  }
+
+  /* PLAN DE TRAVAIL — type dédié, ou en complément d'une cuisine / salle de bain */
+  if (estPdt(m)){
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Plan de travail"),
+      el("div", { class: "grid" }, planTravailForm(m, rerender))));
+  }
+
+  /* MIROIR : uniquement finition, épaisseur, spécifications (+ composition & notes plus bas) */
+  if (estMiroir(m)){
+    const mc = [
+      field("Finition miroir", makeSelect("miroirTeintes", m.miroirTeinte, v => { m.miroirTeinte = v; }), "150px"),
+      field("Épaisseur", makeSelect("miroirEps", m.miroirEp, v => { m.miroirEp = v; }), "120px"),
+    ];
+    mc.push(el("div", { class: "fld", style: "min-width:100%" },
+      checkboxRow("Spécifications :", MIROIR_SPECS, m, "miroirSpecs", () => {})));
+    mc.push(bulle(m, "facadeNote"));
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Miroir"), el("div", { class: "grid" }, mc)));
+  }
+
+  /* CAISSON */
+  if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
+    const cc = [ field("Construction", makeSelect("caissonConstr", m.caissonConstr, v => { m.caissonConstr = v; rerender(); }), "190px") ];
+    if (m.caissonConstr === "Sur mesure"){
+      cc.push(field("Matériau", makeSelect("caissonMat", m.caissonMat, v => { m.caissonMat = v; rerender(); }), "170px"));
+      declMatiereForm(cc, m, K_CAISSON, rerender);
+    } else {
+      cc.push(field("Fournisseur panneau", makeSelect("fournisseurs", m.caissonFournisseur,
+        v => { m.caissonFournisseur = v; m.caissonRef = AD; rerender(); }, "fournisseurs"), "170px"));
+      if (m.caissonFournisseur !== AD && m.caissonFournisseur !== "—"){
+        cc.push(field("Réf. " + m.caissonFournisseur, makeSelect(() => cascadeListe("panneaux", m.caissonFournisseur),
+          m.caissonRef, v => { m.caissonRef = v; }, "panneaux." + m.caissonFournisseur), "170px"));
+      }
+    }
+    cc.push(bulle(m, "caissonNote"));
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Caisson"), el("div", { class: "grid" }, cc)));
+  }
+
+  /* FAÇADE (ou « Matière & finition » pour les types simples) */
+  if (!estMiroir(m) && !estPdt(m)){
+    const fc = [];
+    if (!estSimple(m)){
+      fc.push(field("Type de façade", makeSelect("facadeTypes", m.facadeType, v => { m.facadeType = v; rerender(); }), "190px"));
+      if (m.facadeType === "Cadre + remplissage"){
+        fc.push(field("Type de remplissage", makeSelect("remplissageTypes", m.remplissageType,
+          v => { m.remplissageType = v; rerender(); }), "170px"));
+        if (m.remplissageType === "Tissu" || m.remplissageType === "Tapisserie"){
+          fc.push(field("Fournisseur tissu", makeSelect("tissuFournisseurs", m.tissuFournisseur,
+            v => { m.tissuFournisseur = v; m.tissuRef = AD; rerender(); }, "tissuFournisseurs"), "170px"));
+          if (m.tissuFournisseur !== AD && m.tissuFournisseur !== "—"){
+            fc.push(field("Réf. " + m.tissuFournisseur, makeSelect(() => cascadeListe("tissus", m.tissuFournisseur),
+              m.tissuRef, v => { m.tissuRef = v; }, "tissus." + m.tissuFournisseur), "180px"));
+          }
+        }
+        if (m.remplissageType === "Miroir"){
+          fc.push(field("Miroir", makeSelect("miroirTeintes", m.miroirTeinte, v => { m.miroirTeinte = v; }), "140px"));
+          fc.push(field("Pose du miroir", makeSelect("miroirPoses", m.miroirPose, v => { m.miroirPose = v; }), "150px"));
+        }
+      }
+    }
+    fc.push(field("Matière", makeSelect("facadeMat", m.facadeMat, v => { m.facadeMat = v; rerender(); }), "160px"));
+    declMatiereForm(fc, m, K_FACADE, rerender);
+    fc.push(bulle(m, "facadeNote"));
+    nodes.push(el("div", { class: "bloc" },
+      el("div", { class: "bloc-t" }, estSimple(m) ? "Matière & finition" : "Façade / matière & finition"),
+      el("div", { class: "grid" }, fc)));
+  }
+
+  /* QUINCAILLERIE SPÉCIALE : hors standard atelier (Blum & co ne sont pas listés) */
+  if (!estMiroir(m) && !estPdt(m) && !SANS_QUINC.includes(m.type)){
+    const qc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+      el("input", { type: "checkbox", checked: m.quincSpec,
+        onchange: e => {
+          m.quincSpec = e.target.checked;
+          if (m.quincSpec && !m.quincailleries.length) m.quincailleries.push(newQuinc());
+          rerender();
+        } }),
+      el("span", {}, "Quincaillerie spéciale")) ];
+    const bloc = el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Quincaillerie spéciale"),
+      el("div", { class: "grid" }, qc));
+    if (m.quincSpec){
+      m.quincailleries.forEach(q => {
+        bloc.appendChild(el("div", { class: "ligne-item" },
+          field("Type", makeSelect("quincSpecTypes", q.cat,
+            v => { q.cat = v; q.detail = AD; q.finition = AD; rerender(); }, "quincSpecTypes"), "200px"),
+          (q.cat !== AD && q.cat !== "—")
+            ? field("Réf. / modèle", makeSelect(() => cascadeListe("quincSpecDetails", q.cat),
+                q.detail, v => { q.detail = v; }, "quincSpecDetails." + q.cat), "190px") : null,
+          (q.cat !== AD && q.cat !== "—")
+            ? field("Réf. complémentaire", el("input", { class: "inp", value: q.ref || "",
+                placeholder: "réf. exacte, dimension, coloris...",
+                oninput: e => { q.ref = e.target.value; } })) : null,
+          (q.cat !== AD && q.cat !== "—")
+            ? field("Finition", makeSelect("quincFinitions", q.finition, v => { q.finition = v; }), "140px") : null,
+          el("button", { class: "btn mini", onclick: () => { m.quincailleries = m.quincailleries.filter(x => x.id !== q.id); rerender(); } }, "×")));
+      });
+      bloc.appendChild(el("div", { class: "grid" },
+        el("button", { class: "btn mini", style: "flex:0 0 auto", onclick: () => { m.quincailleries.push(newQuinc()); rerender(); } }, "+ Ajouter une quincaillerie spéciale"),
+        bulle(m, "quincNote")));
+    }
+    nodes.push(bloc);
+  }
+
+  /* POIGNÉES + TRINGLE */
+  if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
+    const pc = [ field("Type de poignée", makeSelect("poigneeTypes", m.poigneeType, v => { m.poigneeType = v; rerender(); }), "190px") ];
+    if (m.poigneeType === "Bouton de porte"){
+      pc.push(field("Réf. bouton", makeSelect("boutonRefs", m.poigneeRef || AD,
+        v => { m.poigneeRef = (v === AD ? "" : v); }, "boutonRefs"), "180px"));
+      pc.push(field("Finition", makeSelect("poigneeFinitions", m.poigneeFinition, v => { m.poigneeFinition = v; }), "170px"));
+    } else if (m.poigneeType === "Push-pull"){
+      pc.push(field("Couleur", makeSelect("pushPullCouleurs", state.refs.pushPullCouleurs.includes(m.poigneeFinition) ? m.poigneeFinition : AD,
+        v => { m.poigneeFinition = v; }), "140px"));
+    } else if (m.poigneeType === "Prise de doigt"){
+      pc.push(field("Forme", makeSelect("priseTypes", m.poigneePrise, v => { m.poigneePrise = v; rerender(); }), "150px"));
+      if (m.poigneePrise === "Profilé"){
+        pc.push(field("Réf. profilé", makeSelect("profilRefs", m.profilRef, v => { m.profilRef = v; }), "160px"));
+      }
+      pc.push(field("Finition", makeSelect("poigneeFinitions", m.poigneeFinition, v => { m.poigneeFinition = v; }), "160px"));
+    } else if (m.poigneeType === "Fournie par le client" || m.poigneeType === "Sans poignée" || m.poigneeType === AD || m.poigneeType === "—"){
+      /* aucun choix supplémentaire */
+    } else {
+      pc.push(field("Réf. / détail", el("input", { class: "inp", value: m.poigneeRef, oninput: e => { m.poigneeRef = e.target.value; } })));
+      pc.push(field("Finition", makeSelect("poigneeFinitions", m.poigneeFinition, v => { m.poigneeFinition = v; }), "160px"));
+    }
+    if (m.poigneeType !== "Sans poignée" && m.poigneeType !== AD && m.poigneeType !== "—"){
+      pc.push(field("Nombre", el("input", { class: "inp mono", value: m.nbPoignees, oninput: e => { m.nbPoignees = e.target.value; } }), "90px"));
+    }
+    pc.push(bulle(m, "poigneeNote"));
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Poignées"), el("div", { class: "grid" }, pc)));
+
+    if (!SANS_TRINGLE.includes(m.type)){
+      const tr = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+        el("input", { type: "checkbox", checked: m.tringle, onchange: e => { m.tringle = e.target.checked; rerender(); } }),
+        el("span", {}, "Tringle")) ];
+      if (m.tringle) tr.push(field("Finition tringle", makeSelect("tringleFinitions", m.tringleFinition, v => { m.tringleFinition = v; }), "160px"));
+      nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Tringle"), el("div", { class: "grid" }, tr)));
+    }
+  }
+
+  /* LED */
+  if (!SANS_LED.includes(m.type)){
+    const lc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+      el("input", { type: "checkbox", checked: m.led, onchange: e => { m.led = e.target.checked; rerender(); } }),
+      el("span", {}, "LED")) ];
+    if (m.led){
+      lc.push(field("Couleur", makeSelect("ledCouleurs", m.ledCouleur, v => { m.ledCouleur = v; }), "190px"));
+      lc.push(field("Emplacement", makeSelect("ledEmpl", m.ledEmpl, v => { m.ledEmpl = v; }), "210px"));
+    }
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Éclairage LED"), el("div", { class: "grid" }, lc)));
+  }
+
+  /* composition / notes (toujours, y compris Miroir : dimensions en composition) */
+  nodes.push(el("div", { class: "grid", style: "margin-top:10px" },
+    field(estMiroir(m) ? "Composition / dimensions (un miroir par ligne)" : "Composition (une ligne par élément : colonnes, caissons, tiroirs...)",
+      el("textarea", { class: "inp", rows: 3, value: m.composition,
+        placeholder: estMiroir(m) ? "Miroir salle d'eau L. 1070x H. 1700" : "1 colonne — 3 tiroirs, 4 étagères, 1 porte",
+        oninput: e => { m.composition = e.target.value; } }))));
+  nodes.push(el("div", { class: "grid", style: "margin-top:10px" },
+    field("Notes / points d'attention",
+      el("textarea", { class: "inp", rows: 2, value: m.notes,
+        placeholder: "Double fond électricité, air salin...",
+        oninput: e => { m.notes = e.target.value; } }))));
+  return nodes;
+}
+
+function renderMeuble(z, m){
+  const card = el("div", { class: "meuble" });
+  const rerender = () => { card.replaceWith(renderMeuble(z, m)); };
+
+  const badge = SANS_LIVRAISON.includes(m.type) ? null
+    : el("span", { class: "badge-liv" + (m.livraison === AD ? " ad" : "") }, m.livraison);
+  card.appendChild(el("div", { class: "m-head" },
+    el("input", { class: "m-code", value: m.code, placeholder: "n° lot",
+      oninput: e => { m.code = e.target.value; } }),
+    el("input", { class: "m-nom", value: m.nom, placeholder: "Désignation de l'agencement...",
+      oninput: e => { m.nom = e.target.value; } }),
+    badge,
+    el("div", { class: "row-actions" },
+      (() => {
+        const i = z.meubles.findIndex(x => x.id === m.id);
+        const move = (delta) => {
+          const j = i + delta;
+          if (j < 0 || j >= z.meubles.length) return;
+          const tmp = z.meubles[i]; z.meubles[i] = z.meubles[j]; z.meubles[j] = tmp;
+          renderZones(); saveAutoNow();
+        };
+        return [
+          el("button", { class: "btn mini", title: "Monter cet agencement",
+            disabled: i <= 0, onclick: () => move(-1) }, "↑"),
+          el("button", { class: "btn mini", title: "Descendre cet agencement",
+            disabled: i >= z.meubles.length - 1, onclick: () => move(1) }, "↓"),
+        ];
+      })(),
+      el("button", { class: "btn mini", onclick: () => { const c = deep(m); c.id = uid(); c.nom = m.nom + " (copie)"; (c.elements||[]).forEach(x => x.id = uid()); (c.quincailleries||[]).forEach(x => x.id = uid()); z.meubles.splice(z.meubles.findIndex(x => x.id === m.id) + 1, 0, c); renderZones(); } }, "Dupliquer"),
+      el("button", { class: "btn mini", onclick: () => { z.meubles = z.meubles.filter(x => x.id !== m.id); renderZones(); } }, "Retirer"))));
+
+  card.appendChild(el("div", { class: "grid" },
+    field("Type", makeSelect("types", m.type, v => { m.type = v; rerender(); }), "200px"),
+    SANS_LIVRAISON.includes(m.type) ? null
+      : field("Mode de livraison", makeSelect("livraisons", m.livraison, v => { m.livraison = v; rerender(); }), "200px")));
+
+  /* Éléments intégrés : tablette, bureau, miroir, piètement — fiches complètes */
+  const elemCards = m.elements.map(it => {
+    const sub = el("div", { class: "sous-item" });
+    sub.appendChild(el("div", { class: "ligne-item" },
+      field("Élément", makeSelect("elementTypes", it.type, v => { it.type = v; rerender(); }), "160px"),
+      field("Désignation / précision",
+        el("input", { class: "inp", value: it.nom || "", placeholder: "ex : tablette chêne ép.30, bureau suspendu L.1200…",
+          oninput: e => { it.nom = e.target.value; } })),
+      el("button", { class: "btn mini", onclick: () => { m.elements = m.elements.filter(x => x.id !== it.id); rerender(); } }, "×")));
+    if (it.type !== AD) renderCorps(it, rerender).forEach(n => sub.appendChild(n));
+    return sub;
+  });
+  if (!estMiroir(m)) card.appendChild(el("div", { class: "bloc" },
+    el("div", { class: "bloc-t" }, "Éléments intégrés à l'agencement"),
+    elemCards,
+    el("button", { class: "btn mini", onclick: () => { m.elements.push(newElement()); rerender(); } }, "+ Ajouter une ligne (tablette, plan de travail, bureau, miroir, piètement)")));
+
+  renderCorps(m, rerender).forEach(n => card.appendChild(n));
+  return card;
+}
+
+/* ================= FEUILLE IMPRIMABLE ================= */
+const isAD = (v) => v === AD;
+const nn = (v) => v && v !== AD && v !== "—";
+function fv(v){
+  if (isAD(v)) return el("span", { class: "ad" }, AD);
+  if (!v || v === "—") return el("span", { class: "p-lab" }, "—");
+  return el("span", { class: "p-val" }, v);
+}
+function pline(label, ...vals){
+  return el("div", { class: "p-line" }, el("span", { class: "p-lab" }, label + " : "), vals);
+}
+function declMatierePrint(fl, m, K){
+  const mat = m[K.mat];
+  if (MAT_CASCADE.includes(mat)){
+    fl.push(pline("Décor", fv(m[K.four]), nn(m[K.four]) ? [" ", fv(m[K.ref])] : ""));
+    return;
+  }
+  if (mat === AD || mat === "—") return;
+  if (mat === "MDF"){
+    fl.push(pline("Finition MDF", m[K.mdf] && m[K.mdf].length ? el("span", { class: "p-val" }, m[K.mdf].join(" + ")) : el("span", { class: "ad" }, AD)));
+    if (m[K.mdf] && m[K.mdf].includes("Peint"))
+      fl.push(pline("Peinture", fv(m[K.pFour]), nn(m[K.pFour]) ? [" ", fv(m[K.pRef])] : "",
+        nn(m[K.pAsp]) ? [" · ", fv(m[K.pAsp])] : ""));
+  } else if (matAFinir(mat)){
+    fl.push(pline("Finition", fv(m[K.fin])));
+    if (m[K.fin] === "Peint") fl.push(pline("Peinture", fv(m[K.pFour]), nn(m[K.pFour]) ? [" ", fv(m[K.pRef])] : "",
+      nn(m[K.pAsp]) ? [" · ", fv(m[K.pAsp])] : ""));
+    if (m[K.fin] === "Vernis") fl.push(pline("Vernis", fv(m[K.vernis])));
+    if (m[K.fin] === "Huilé (Rubio)") fl.push(pline("Teinte huile", fv(m[K.huile])));
+  } else if (nn(m[K.ref])) fl.push(pline("Réf. décor", fv(m[K.ref])));
+}
+function corpsSections(m){
+  const secs = [];
+  const sec = (title, lines, full) => { if (lines.length) secs.push(el("div", { class: "p-sec" + (full ? " full" : "") }, el("div", { class: "p-sec-t" }, title), lines)); };
+
+  if (estCuisine(m)){
+    const ec = [];
+    if (m.electro){
+      ec.push(pline("Fourni par", fv(m.electroFournisseur)));
+      ec.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Éléments : "),
+        m.electroElements.length
+          ? el("span", { class: "p-val" }, m.electroElements.map(x => x + (m.electroRefs && m.electroRefs[x] ? " (" + m.electroRefs[x] + ")" : "")).join(" · "))
+          : el("span", { class: "ad" }, AD)));
+      if (m.electroNote) ec.push(el("div", { class: "p-line p-note" }, "💬 " + m.electroNote));
+    } else ec.push(el("div", { class: "p-line" }, "Électroménager non fourni"));
+    sec("Électroménager", ec);
+  }
+  if (estPdt(m)){
+    const pc = [ pline("Matière", fv(m.pdtMat)), pline("Fournisseur", fv(m.pdtFournisseur), nn(m.pdtFournisseur) ? [" ", fv(m.pdtRef)] : "") ];
+    pc.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Usinages : "),
+      m.pdtOptions.length
+        ? el("span", { class: "p-val" }, m.pdtOptions.map(x => x + (m.pdtRefs && m.pdtRefs[x] ? " (" + m.pdtRefs[x] + ")" : "")).join(" · "))
+        : el("span", { class: "ad" }, AD)));
+    if (m.pdtNote) pc.push(el("div", { class: "p-line p-note" }, "💬 " + m.pdtNote));
+    sec("Plan de travail", pc);
+  }
+
+  if (estMiroir(m)){
+    sec("Miroir", [
+      pline("Finition", fv(m.miroirTeinte)),
+      pline("Épaisseur", fv(m.miroirEp)),
+      pline("Spécifications", m.miroirSpecs.length ? el("span", { class: "p-val" }, m.miroirSpecs.join(" + ")) : el("span", { class: "ad" }, AD)),
+      m.facadeNote ? el("div", { class: "p-line p-note" }, "💬 " + m.facadeNote) : null,
+    ].filter(Boolean));
+  }
+  if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
+    const cl = [ pline("Construction", fv(m.caissonConstr)) ];
+    if (m.caissonConstr === "Sur mesure"){
+      cl.push(pline("Matériau", fv(m.caissonMat)));
+      declMatierePrint(cl, m, K_CAISSON);
+    } else {
+      cl.push(pline("Panneau", fv(m.caissonFournisseur), nn(m.caissonFournisseur) ? [" ", fv(m.caissonRef)] : ""));
+    }
+    if (m.caissonNote) cl.push(el("div", { class: "p-line p-note" }, "💬 " + m.caissonNote));
+    sec("Caisson", cl);
+  }
+  if (!estMiroir(m) && !estPdt(m)){
+    const fl = [];
+    if (!estSimple(m)){
+      fl.push(pline("Type", fv(m.facadeType)));
+      if (m.facadeType === "Cadre + remplissage"){
+        fl.push(pline("Remplissage", fv(m.remplissageType)));
+        if (m.remplissageType === "Tissu" || m.remplissageType === "Tapisserie")
+          fl.push(pline("Tissu", fv(m.tissuFournisseur), nn(m.tissuFournisseur) ? [" ", fv(m.tissuRef)] : ""));
+        if (m.remplissageType === "Miroir")
+          fl.push(pline("Miroir", fv(m.miroirTeinte), " · ", fv(m.miroirPose)));
+      }
+    }
+    fl.push(pline("Matière", fv(m.facadeMat)));
+    declMatierePrint(fl, m, K_FACADE);
+    if (m.facadeNote) fl.push(el("div", { class: "p-line p-note" }, "💬 " + m.facadeNote));
+    sec(estSimple(m) ? "Matière & finition" : "Façade / matière & finition", fl);
+
+    if (!SANS_QUINC.includes(m.type) && m.quincSpec){
+      const qReal = m.quincailleries.filter(q => q.cat !== "—");
+      const ql = qReal.map(q =>
+        el("div", { class: "p-line" }, "• ", fv(q.cat),
+          nn(q.cat) ? [" — ", fv(q.detail), (q.ref ? el("span", { class: "p-val" }, " (" + q.ref + ")") : ""), " · ", fv(q.finition)] : ""));
+      if (m.quincNote) ql.push(el("div", { class: "p-line p-note" }, "💬 " + m.quincNote));
+      sec("Quincaillerie spéciale", ql);
+    }
+  }
+  if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
+    const pl = [];
+    const po = el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Poignées : "), fv(m.poigneeType));
+    if (m.poigneeType === "Prise de doigt"){
+      po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(m.poigneePrise));
+      if (m.poigneePrise === "Profilé"){ po.appendChild(document.createTextNode(" ")); po.appendChild(fv(m.profilRef)); }
+    }
+    if (nn(m.poigneeRef)) po.appendChild(el("span", { class: "p-val" }, " — " + m.poigneeRef));
+    if (m.poigneeType !== "Fournie par le client" && m.poigneeType !== "Sans poignée" && m.poigneeType !== AD && m.poigneeType !== "—"){
+      po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(m.poigneeFinition));
+    }
+    if (m.nbPoignees) po.appendChild(el("span", { class: "p-val" }, " ×" + m.nbPoignees));
+    pl.push(po);
+    if (m.tringle) pl.push(pline("Tringle", fv(m.tringleFinition)));
+    if (m.poigneeNote) pl.push(el("div", { class: "p-line p-note" }, "💬 " + m.poigneeNote));
+    sec("Poignées & tringle", pl);
+  }
+  if (m.led && !SANS_LED.includes(m.type)) sec("Éclairage LED", [ el("div", { class: "p-line" }, fv(m.ledCouleur), " — ", fv(m.ledEmpl)) ]);
+  if (m.composition) sec(estMiroir(m) ? "Composition / dimensions" : "Composition", [ el("div", { class: "p-mono" }, m.composition) ], true);
+  if (m.notes){
+    secs.push(el("div", { class: "p-sec full p-notes-box" },
+      el("div", { class: "p-sec-t" }, "⚠ Notes / points d'attention"),
+      el("div", { class: "p-mono" }, m.notes)));
+  }
+  return secs;
+}
+function buildSheet(){
+  const c = state.chantier;
+  const sheet = document.getElementById("sheet");
+  sheet.innerHTML = "";
+  const metaLine = (lab, val) => el("div", {},
+    el("span", { class: "p-lab" }, lab + " : "), el("b", {}, val || "—"));
+  sheet.appendChild(el("div", { class: "p-cartouche" },
+    el("div", {},
+      el("h1", {}, "Fiche chantier" + (c.nom ? " — " + c.nom : "")),
+      el("div", { class: "p-meta" },
+        metaLine("Client", c.client),
+        metaLine("Adresse", c.adresse),
+        c.contact ? metaLine("Contact", c.contact) : null,
+        (c.dossier || c.devis)
+          ? el("div", {}, el("span", { class: "p-lab" }, "Dossier : "), el("b", {}, c.dossier || "—"),
+              el("span", { class: "p-lab" }, "   ·   Devis : "), el("b", {}, c.devis || "—"))
+          : null)),
+    el("div", { class: "p-meta", style: "text-align:right" },
+      metaLine("Date", c.date),
+      el("div", {}, el("span", { class: "p-lab" }, "Zones : " + state.zones.length +
+        " · Agencements : " + state.zones.reduce((s, z) => s + z.meubles.length, 0))),
+      el("div", { class: "p-acces" + (isAD(c.acces) ? " ad" : "") },
+        "ACCÈS : " + (c.acces || "—") + (c.accesPrecision ? " — " + c.accesPrecision : "")))));
+  if (state.generalites) sheet.appendChild(el("div", { class: "p-gen" }, el("strong", {}, "GÉNÉRALITÉS — "), state.generalites));
+
+  state.zones.forEach(z => {
+    sheet.appendChild(el("div", { class: "p-zone" }, z.nom || "Zone"));
+    z.meubles.forEach(m => {
+      const card = el("div", { class: "p-meuble" },
+        el("div", { class: "p-mhead" },
+          m.code ? el("span", { class: "p-code" }, m.code) : null,
+          el("span", { class: "p-nom" }, m.nom || "—"),
+          el("span", { class: "p-type" }, isAD(m.type) ? "" : m.type),
+          SANS_LIVRAISON.includes(m.type) ? null
+            : el("span", { class: "p-liv" + (isAD(m.livraison) ? " ad" : "") }, m.livraison)),
+        el("div", { class: "p-body" }, corpsSections(m)));
+      m.elements.filter(it => it.type !== AD || it.nom).forEach(it => {
+        card.appendChild(el("div", { class: "p-elem" },
+          el("div", { class: "p-elem-t" }, "↳ ", fv(it.type), it.nom ? " — " + it.nom : ""),
+          el("div", { class: "p-body" }, corpsSections(it))));
+      });
+      sheet.appendChild(card);
+    });
+  });
+
+  /* Bloc de données machine : permet de réimporter la fiche depuis le PDF imprimé */
+  try {
+    const payload = {
+      v: APP_VERSION, chantier: state.chantier, generalites: state.generalites,
+      zones: state.zones.map(z => ({ nom: z.nom, meubles: z.meubles.map(compactMeuble) })),
+    };
+    sheet.appendChild(el("div", { class: "p-data" },
+      el("div", { class: "p-data-t" },
+        "BLOC DE DONNÉES — cette page permet de réimporter la fiche dans l'outil (bouton « Importer une fiche PDF »). Conservez-la dans le PDF, ne l'imprimez pas sur papier si inutile."),
+      el("div", { class: "p-data-b" }, "FICHEDATA" + APP_VERSION + "." + b64EncodeUtf8(JSON.stringify(payload)) + ".FINFICHE")));
+  } catch(e){}
+}
+
+/* ---- Sérialisation compacte : on n'embarque que ce qui diffère des valeurs par défaut ---- */
+function compactMeuble(m){
+  const tpl = newMeuble();
+  const o = {};
+  for (const k in tpl){
+    if (k === "id") continue;
+    const v = m[k];
+    if (k === "elements"){ const a = (v || []).map(compactMeuble); if (a.length) o.elements = a; continue; }
+    if (k === "quincailleries"){
+      const a = (v || []).map(q => ({ cat: q.cat, detail: q.detail, finition: q.finition, ref: q.ref || "" }));
+      if (a.length) o.quincailleries = a; continue;
+    }
+    if (Array.isArray(v)){ if (v.length) o[k] = v; continue; }
+    if (v && typeof v === "object"){
+      const net = {};
+      for (const kk in v) if (v[kk]) net[kk] = v[kk];
+      if (Object.keys(net).length) o[k] = net;
+      continue;
+    }
+    if (v !== tpl[k]) o[k] = v;
+  }
+  return o;
+}
+function b64EncodeUtf8(s){
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+  return btoa(bin);
+}
+function b64DecodeUtf8(b){
+  const bin = atob(b);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/* ================= EXPORTS / IMPORTS ================= */
+function download(name, content, type){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = name;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function exportJSON(){
+  download("fiche-" + ((state.chantier.nom || state.chantier.adresse || "chantier").slice(0, 40)).replace(/[^\wÀ-ü-]+/g, "_") + ".json",
+    JSON.stringify(state, null, 1), "application/json");
+}
+/* Réaligne une valeur enregistrée sur l'orthographe de référence de la liste */
+function alignRef(listKey, v){
+  if (!v || v === AD || v === "—") return v;
+  return memeChoix(state.refs[listKey], v) || v;
+}
+function reviveMeuble(m){
+  return Object.assign(newMeuble(), m, {
+    id: uid(),
+    type: alignRef("types", m.type),
+    livraison: alignRef("livraisons", m.livraison),
+    elements: (m.elements || []).map(x => reviveMeuble(Object.assign({}, x, { nom: x.nom || x.detail || "" }))),
+    quincailleries: (m.quincailleries || []).map(x => Object.assign(newQuinc(), x, { id: uid() })),
+    mdfFinitions: Array.isArray(m.mdfFinitions) ? m.mdfFinitions : [],
+    caissonMdfFinitions: Array.isArray(m.caissonMdfFinitions) ? m.caissonMdfFinitions : [],
+    miroirSpecs: Array.isArray(m.miroirSpecs) ? m.miroirSpecs : [],
+    pdtOptions: Array.isArray(m.pdtOptions) ? m.pdtOptions : [],
+    pdtRefs: (m.pdtRefs && typeof m.pdtRefs === "object") ? Object.assign({}, m.pdtRefs) : {},
+    electroElements: Array.isArray(m.electroElements) ? m.electroElements : [],
+    electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
+  });
+}
+function importJSONFile(f){
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (d.chantier) state.chantier = Object.assign({ acces: "Plain-pied", accesPrecision: "" }, d.chantier);
+      if (typeof d.generalites === "string") state.generalites = d.generalites;
+      if (Array.isArray(d.zones)) state.zones = d.zones.map(z => ({
+        id: uid(), nom: z.nom || "", open: true,
+        meubles: (z.meubles || []).map(reviveMeuble),
+      }));
+      if (d.refs) for (const k in state.refs){
+        if (Array.isArray(d.refs[k]) && d.refs[k].length) state.refs[k] = d.refs[k].slice();
+      }
+      if (d.cascades) for (const g in state.cascades){
+        if (d.cascades[g]) for (const f2 in d.cascades[g]){
+          if (Array.isArray(d.cascades[g][f2]) && d.cascades[g][f2].length) state.cascades[g][f2] = d.cascades[g][f2].slice();
+        }
+      }
+      if (d.usage) state.usage = d.usage;
+      saveRefs();
+      renderChantier(); renderZones();
+      setStatus("ok", "Fiche importée.");
+    } catch(e){ setStatus("err", "Fichier JSON invalide."); }
+  };
+  r.readAsText(f);
+}
+
+/* ---- Base partageable : listes + cascades + statistiques d'usage ---- */
+
+/* ================= STATUT ================= */
+function setStatus(kind, msg){
+  const box = document.getElementById("statusBox");
+  box.innerHTML = "";
+  if (!kind) return;
+  const div = el("div", { class: "status " + kind }, msg);
+  if (kind !== "wait") div.appendChild(el("button", { class: "status-x", onclick: () => setStatus(null) }, "×"));
+  box.appendChild(div);
+}
+
+/* ================= IMPORT PDF ================= */
+let pdfjsReady = null;
+function loadPdfJs(){
+  if (pdfjsReady) return pdfjsReady;
+  pdfjsReady = new Promise((res, rej) => {
+    if (window.pdfjsLib) return res(window.pdfjsLib);
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      res(window.pdfjsLib);
+    };
+    s.onerror = () => rej(new Error("Impossible de charger le lecteur PDF (connexion internet requise pour la 1re utilisation)."));
+    document.head.appendChild(s);
+  });
+  return pdfjsReady;
+}
+async function extractPdfText(file){
+  const pdfjs = await loadPdfJs();
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjs.getDocument({ data: buf }).promise;
+  let out = "";
+  for (let p = 1; p <= doc.numPages; p++){
+    const page = await doc.getPage(p);
+    const tc = await page.getTextContent();
+    let lastY = null;
+    tc.items.forEach(it => {
+      const y = it.transform ? it.transform[5] : null;
+      if (lastY !== null && y !== null && Math.abs(y - lastY) > 3) out += "\n";
+      else if (out && !out.endsWith("\n") && !out.endsWith(" ")) out += " ";
+      out += it.str;
+      if (y !== null) lastY = y;
+    });
+    out += "\n\n";
+  }
+  return out;
+}
+/* Clé de comparaison : ignore accents, casse, ponctuation et espaces multiples.
+   « pietement », « Piètement » et « PIETEMENT » deviennent une seule et même entrée. */
+function normKey(s){
+  return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+/* Retire les doublons d'une liste ; garde l'orthographe de référence (celle livrée par défaut)
+   quand une variante correspond, sinon la première occurrence rencontrée. */
+function dedupeListe(liste, defauts){
+  const prefere = {};
+  (defauts || []).forEach(d => { const k = normKey(d); if (!(k in prefere)) prefere[k] = d; });
+  const vus = {}, out = [];
+  (liste || []).forEach(v => {
+    const k = normKey(v);
+    if (!k){ if (!out.includes(v)) out.push(v); return; }
+    if (k in vus){
+      /* doublon : si la variante conservée n'est pas l'orthographe de référence, on la corrige */
+      if (prefere[k] && out[vus[k]] !== prefere[k]) out[vus[k]] = prefere[k];
+      return;
+    }
+    vus[k] = out.length;
+    out.push(prefere[k] || v);
+  });
+  return out;
+}
+/* Retrouve l'entrée existante correspondant à une valeur, quelle que soit son orthographe */
+function memeChoix(liste, v){
+  const k = normKey(v);
+  return (liste || []).find(x => normKey(x) === k);
+}
+function ensureRef(listKey, v, fallback){
+  if (v === "—") return "—";
+  if (!v || v === AD) return fallback;
+  const exist = memeChoix(state.refs[listKey], v);
+  if (exist) return exist;
+  state.refs[listKey].push(v); saveRefs();
+  return v;
+}
+function ensureCascade(group, key, v, fallback){
+  if (v === "—") return "—";
+  if (!v || v === AD || !key || key === AD || key === "—") return fallback;
+  const lst = cascadeListe(group, key);
+  const exist = memeChoix(lst, v);
+  if (exist) return exist;
+  lst.push(v); saveRefs();
+  return v;
+}
+function sanitizeMeuble(m){
+  const out = Object.assign(newMeuble(), {
+    code: m.code || "", nom: m.nom || "",
+    composition: m.composition || "", notes: m.notes || "",
+    poigneeRef: m.poigneeRef || "", nbPoignees: String(m.nbPoignees == null ? "" : m.nbPoignees),
+    caissonNote: m.caissonNote || "", facadeNote: m.facadeNote || "",
+    quincNote: m.quincNote || "", poigneeNote: m.poigneeNote || "",
+    led: !!m.led, tringle: !!m.tringle,
+    mdfFinitions: Array.isArray(m.mdfFinitions) ? m.mdfFinitions.filter(x => ["Brut","Apprêté","Peint"].includes(x)) : [],
+    caissonMdfFinitions: Array.isArray(m.caissonMdfFinitions) ? m.caissonMdfFinitions.filter(x => ["Brut","Apprêté","Peint"].includes(x)) : [],
+    pdtOptions: Array.isArray(m.pdtOptions) ? m.pdtOptions.filter(x => PDT_OPTIONS.includes(x)) : [],
+    pdtRefs: (m.pdtRefs && typeof m.pdtRefs === "object") ? Object.assign({}, m.pdtRefs) : {},
+    electroElements: Array.isArray(m.electroElements) ? m.electroElements.filter(x => ELECTRO_ELEMENTS.includes(x)) : [],
+    electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
+    electro: !!m.electro, quincSpec: !!m.quincSpec,
+    pdtMat: ensureRef("pdtMat", m.pdtMat, AD),
+    pdtFournisseur: ensureRef("pdtFournisseurs", m.pdtFournisseur, AD),
+    pdtRef: ensureCascade("planTravail", ensureRef("pdtFournisseurs", m.pdtFournisseur, AD), m.pdtRef, AD),
+    electroFournisseur: ensureRef("electroFournisseurs", m.electroFournisseur, AD),
+    pdtNote: m.pdtNote || "", electroNote: m.electroNote || "",
+    miroirSpecs: Array.isArray(m.miroirSpecs) ? m.miroirSpecs.filter(x => MIROIR_SPECS.includes(x)) : [],
+  });
+  out.type = ensureRef("types", m.type, AD);
+  out.livraison = ensureRef("livraisons", m.livraison, AD);
+  out.caissonConstr = ensureRef("caissonConstr", m.caissonConstr, AD);
+  out.caissonMat = ensureRef("caissonMat", m.caissonMat, AD);
+  out.caissonFournisseur = ensureRef("fournisseurs", m.caissonFournisseur, AD);
+  out.caissonRef = ensureCascade("panneaux", out.caissonFournisseur, m.caissonRef, AD);
+  out.caissonFinition = ensureRef("finitions", m.caissonFinition, AD);
+  out.caissonVernisType = ensureRef("vernisTypes", m.caissonVernisType, AD);
+  out.caissonHuileTeinte = ensureRef("huileTeintes", m.caissonHuileTeinte, AD);
+  out.caissonPeintureFournisseur = ensureRef("peintureFournisseurs", m.caissonPeintureFournisseur, AD);
+  out.caissonPeintureRef = ensureCascade("peintures", out.caissonPeintureFournisseur, m.caissonPeintureRef, AD);
+  out.caissonPeintureAspect = ensureRef("peintureAspects", m.caissonPeintureAspect, AD);
+  out.peintureAspect = ensureRef("peintureAspects", m.peintureAspect, AD);
+  out.facadeType = ensureRef("facadeTypes", m.facadeType, AD);
+  out.facadeMat = ensureRef("facadeMat", m.facadeMat, AD);
+  out.facadeFournisseur = ensureRef("fournisseurs", m.facadeFournisseur, AD);
+  out.facadeRef = MAT_CASCADE.includes(out.facadeMat)
+    ? ensureCascade("panneaux", out.facadeFournisseur, m.facadeRef, AD)
+    : ensureRef("matRefs", m.facadeRef, AD);
+  out.remplissageType = ensureRef("remplissageTypes", m.remplissageType, AD);
+  out.tissuFournisseur = ensureRef("tissuFournisseurs", m.tissuFournisseur, AD);
+  out.tissuRef = ensureCascade("tissus", out.tissuFournisseur, m.tissuRef, AD);
+  out.miroirTeinte = ensureRef("miroirTeintes", m.miroirTeinte, AD);
+  out.miroirPose = ensureRef("miroirPoses", m.miroirPose, AD);
+  out.miroirEp = ensureRef("miroirEps", m.miroirEp, AD);
+  out.finition = ensureRef("finitions", m.finition, AD);
+  out.vernisType = ensureRef("vernisTypes", m.vernisType, AD);
+  out.huileTeinte = ensureRef("huileTeintes", m.huileTeinte, AD);
+  out.peintureFournisseur = ensureRef("peintureFournisseurs", m.peintureFournisseur, AD);
+  out.peintureRef = ensureCascade("peintures", out.peintureFournisseur, m.peintureRef, AD);
+  out.quincailleries = (Array.isArray(m.quincailleries) ? m.quincailleries : []).map(q => {
+    const cat = ensureRef("quincSpecTypes", q.cat, AD);
+    return {
+      id: uid(), cat,
+      detail: (cat === AD || cat === "—") ? AD : ensureCascade("quincSpecDetails", cat, q.detail, AD),
+      ref: q.ref || "",
+      finition: (cat === AD || cat === "—") ? AD : ensureRef("quincFinitions", q.finition, AD),
+    };
+  });
+  out.elements = (Array.isArray(m.elements) ? m.elements : []).map(x => {
+    const e2 = sanitizeMeuble(Object.assign({}, x, { code: "", nom: x.nom || x.detail || "" }));
+    e2.type = ensureRef("elementTypes", x.type, AD);
+    return e2;
+  });
+  out.poigneeType = ensureRef("poigneeTypes", m.poigneeType, AD);
+  if (out.poigneeType === "Bouton de porte" && m.poigneeRef && m.poigneeRef !== AD && m.poigneeRef !== "—")
+    ensureRef("boutonRefs", m.poigneeRef, "");
+  out.poigneePrise = ensureRef("priseTypes", m.poigneePrise, AD);
+  out.profilRef = ensureRef("profilRefs", m.profilRef, AD);
+  out.bequillageRef = ensureRef("bequillages", m.bequillageRef, AD);
+  out.poigneeFinition = out.poigneeType === "Push-pull"
+    ? ensureRef("pushPullCouleurs", m.poigneeFinition, AD)
+    : ensureRef("poigneeFinitions", m.poigneeFinition, AD);
+  out.tringleFinition = ensureRef("tringleFinitions", m.tringleFinition, AD);
+  out.ledCouleur = ensureRef("ledCouleurs", m.ledCouleur, AD);
+  out.ledEmpl = ensureRef("ledEmpl", m.ledEmpl, AD);
+  return out;
+}
+
+
+/* ---- Analyse locale par règles (secours sans IA), calée sur les devis de l'atelier ---- */
+function heuristicParse(text){
+  const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean)
+    .filter(l => !/^Page\s+\d+\/\d+/i.test(l))
+    .filter(l => !/Siret|Naf\s*:|TVA\s*:|Site internet|Powered by|IBAN|BIC\s*:|Banque\s*:|Libell[ée] du ch[èe]que|Date de validit[ée]|Signature du client|Moyen de r[èe]glement|D[ée]lai de r[èe]glement|Acompte\s*:|Avancement|Reste [àa] facturer|Total net|Montant (total|du march[ée])|rue Fonfrede|^Tel\s*:|^Email\s*:|^Mobile\s*:|Votre contact|^Nom \/ Code|^Avt\b/i.test(l))
+    .filter(l => !/^[-–]?\s*\d[\d\s\u00A0.]*,\d{2}\s*(€|%)?\s*$/.test(l) && l !== "-" && l !== "–");
+  const zones = [];
+  let zone = null, meuble = null, etage = "", fraisLabel = false;
+  const TYPE_MAP = [
+    [/lit(s)? superpos/i,"Lit superposé"],[/t[êe]te de lit/i,"Tête de lit"],[/dressing/i,"Dressing"],
+    [/placard|vestiaire/i,"Placard"],[/biblioth/i,"Bibliothèque"],[/chemin[ée]e/i,"Manteau de cheminée"],
+    [/[ée]tag[èe]re/i,"Étagère"],[/cache[- ]?clim|console/i,"Console cache-clim"],[/cuisine|buanderie/i,"Cuisine"],
+    [/banquette/i,"Banquette"],[/bureau/i,"Bureau"],[/salle de bain|meuble (sous[- ])?vasques?|sous[- ]vasque|meuble wc/i,"Salle de bain"],
+    [/soubassement/i,"Soubassement"],[/pi[èe]tement/i,"Piètement"],[/tablette/i,"Tablette"],
+    [/miroir/i,"Miroir"],[/plan de travail|plan de tra/i,"Plan de travail"],
+  ];
+  const typeOf = (s) => { for (const [re, t] of TYPE_MAP) if (re.test(s)) return t; return AD; };
+  const pushMeuble = () => { if (meuble && zone) zone.meubles.push(sanitizeMeuble(meuble)); meuble = null; };
+  const pushZone = () => { pushMeuble(); if (zone && zone.meubles.length) zones.push(zone); };
+  const zNom = (n) => (etage ? etage + " — " : "") + n;
+  const freshMeuble = (code, nom, type) => Object.assign({}, newMeuble(), {
+    code: code || "", nom: nomDepuis(nom || ""), type: type || AD,
+    quincailleries: [], elements: [], mdfFinitions: [], miroirSpecs: [], composition: "", notes: "" });
+  const stripPrix = (s) => s.replace(/\s+[-–]?\s*\d{1,3}(?:[\s\u00A0]\d{3})*,\d{2}\s*€?\s*$/, "").trim();
+  const dimsOf = (s) => {
+    const d = stripPrix(s).match(/L\.\s*±?\s*[\d\/][\dxX±,.\/\s]*(?:P\.\s*±?\s*[\d\/]+\s*x?\s*)?(?:H\.\s*±?\s*[\d\/]+)?(?:\s*x?\s*[ée]p\.?\s*\d+\s*mm)?/);
+    return d ? d[0].replace(/\s+/g, " ").trim() : "";
+  };
+  const nomDepuis = (s) => stripPrix(s).replace(/\s*[-–]?\s*L\.\s*±?\s*[\d\/].*$/, "").trim();
+  /* Titre de zone : « 2. CHAMBRE SOPHIE », « 1.1. SALON » (MAJUSCULES). Ambiguïté x.y : zone seulement si la zone courante est vide. */
+  const isZoneTitle = (l) => {
+    const m2 = l.match(/^(\d+(?:\.\d+)?)\.\s+([A-ZÀ-Ü0-9'\/ \-]{3,})$/);
+    if (!m2) return null;
+    const nom = m2[2].trim();
+    if (/[a-zà-ü]/.test(nom)) return null;
+    if (/^(LIVRAISON|OPTIONS?|REMISES?)$/i.test(nom)) return null;
+    if (m2[1].includes(".") && zone && (zone.meubles.length || meuble)) return null;
+    return nom;
+  };
+  const isItemLabel = (l) => {
+    const m2 = l.match(/^(\d{1,2}(?:\.\d+){1,2})\.?\s+(.+)$/);
+    if (!m2) return null;
+    const ag = m2[2].match(/^((?:AG|MR?)\s?\.?\s?\d+(?:\.\d+)*)/i);
+    return { code: ag ? ag[1].replace(/\s+/g, "") : m2[1], label: m2[2].trim() };
+  };
+  /* Titre avec code interne sans n° de poste : « M05 - Cuisine … », « AG.01 Bibliothèque bar à vin L. … » */
+  const isCodeTitle = (l) => {
+    const m2 = l.match(/^(?:[A-Za-zÀ-ü'’ .]{0,40}?)\b((?:AG|MR?)\s?\.?\s?\d+(?:\.\d+)*)\s*\.?\s*[-–]?\s*(.{3,90})$/);
+    if (!m2) return null;
+    if (/mise en peinture|peinture des/i.test(l)) return null;
+    return { code: m2[1].replace(/\s+/g, ""), label: m2[2].trim() };
+  };
+  const addQuinc = (cat, detail) => {
+    if (!meuble.quincailleries) meuble.quincailleries = [];
+    meuble.quincSpec = true;
+    if (!meuble.quincailleries.some(q => q.cat === cat && q.detail === detail))
+      meuble.quincailleries.push({ cat, detail, finition: AD, ref: "" });
+  };
+  const addNote = (t) => { if (meuble && t && !(meuble.notes || "").includes(t)) meuble.notes = (meuble.notes ? meuble.notes + "\n" : "") + t; };
+  const addCompo = (t) => { if (meuble && t) meuble.composition += (meuble.composition ? "\n" : "") + t; };
+  const markPeint = () => {
+    if (!meuble) return;
+    if (meuble.facadeMat === "MDF" || meuble.facadeMat === AD){
+      if (meuble.facadeMat === AD) meuble.facadeMat = "MDF";
+      if (!meuble.mdfFinitions.includes("Peint")) meuble.mdfFinitions.push("Peint");
+    } else meuble.finition = "Peint";
+  };
+
+  for (const l of lines){
+    /* Niveaux et titres de zones */
+    if (/^(RDC|R\+\d|SOUS[- ]SOL|[ÉE]TAGE\s*\d*)$/i.test(l)){ etage = l.toUpperCase(); continue; }
+    if (/^AGENCEMENTS?$/i.test(l)) continue;
+    const zt = isZoneTitle(l);
+    if (zt){ pushZone(); zone = { id: uid(), nom: zNom(zt), open: true, meubles: [] }; continue; }
+
+    if (!zone){
+      /* Avant la 1re zone : infos chantier… sauf si la ligne est déjà un poste (devis sans titres de zones) */
+      const ac = l.match(/Adresse chantier\s*:?\s*(.*)$/i);
+      if (ac){ if (ac[1]) state.chantier.adresse = ac[1]; else state._wa = 2; continue; }
+      if (state._wa){ state.chantier.adresse = (state.chantier.adresse ? state.chantier.adresse + ", " : "") + l; if (--state._wa <= 0) delete state._wa; continue; }
+      const cli = l.match(/^((?:Mme|Mlle|M\.|M et Mme|M ?& ?M\.?|SAS|SARL|SCI|EURL)\s+.{2,60})$/i);
+      if (cli && !state.chantier.client){
+        state.chantier.client = cli[1].trim();
+        state.chantier.nom = state.chantier.nom || cli[1].replace(/^(Mme|Mlle|M\.|M et Mme|M ?& ?M\.?|SAS|SARL|SCI|EURL)\s+/i, "").trim();
+        continue;
+      }
+      const dt = l.match(/En date du\s*:?\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+      if (dt){ state.chantier.date = dt[3] + "-" + dt[2] + "-" + dt[1]; continue; }
+      /* Ligne qui ressemble à un poste alors qu'aucune zone n'a été vue → zone par défaut */
+      const ressemblePoste = isItemLabel(l) || isCodeTitle(l)
+        || /^([A-Za-zÀ-ü'’\- ]{3,30}?)\s+\1\b/i.test(l)
+        || (typeOf(l) !== AD && l.length < 70 && /L\.\s*±?\s*[\d\/]/.test(l));
+      if (!ressemblePoste) continue;
+      zone = { id: uid(), nom: zNom("AGENCEMENTS"), open: true, meubles: [] };
+      /* pas de continue : la ligne est traitée normalement ci-dessous */
+    }
+
+    /* Nouveaux postes */
+    const item = isItemLabel(l);
+    const codeTitle = item ? null : isCodeTitle(l);
+    if (item || codeTitle){
+      const it = item || codeTitle;
+      if (/^(mise en )?peinture/i.test(it.label) || /^(mise en )?peinture/i.test(l)){ markPeint(); continue; }
+      if (/^tapisserie/i.test(it.label)){
+        if (meuble){ meuble.facadeType = "Cadre + remplissage"; meuble.remplissageType = "Tissu"; }
+        continue;
+      }
+      if (/^(livraison|d[ée]placement|frais de port|remise)/i.test(it.label)) continue;
+      /* Titre descriptif du poste courant (même code interne, ou libellé fraîchement créé) → fusion, pas de doublon */
+      const memeCode = meuble && meuble.code && it.code.replace(/\./g, "").toLowerCase() === meuble.code.replace(/\./g, "").toLowerCase();
+      if (meuble && (memeCode || (fraisLabel && codeTitle && !meuble.composition))){
+        if (codeTitle) meuble.code = it.code;
+        fraisLabel = false;
+        const better = nomDepuis(it.label.replace(/^((?:AG|MR?)\s?\.?\s?\d+(?:\.\d+)*)\s*\.?\s*[-–]?\s*/i, ""));
+        if (better.length > 2 && (better.length > meuble.nom.length || /^(AG|MR?)[\s.]?\d/i.test(meuble.nom))) meuble.nom = better;
+        if (meuble.type === AD) meuble.type = typeOf(l);
+        const d0 = dimsOf(l); if (d0) addCompo(d0);
+        continue;
+      }
+      pushMeuble();
+      meuble = freshMeuble(it.code, it.label.replace(/^((?:AG|MR?)\s?\.?\s?\d+(?:\.\d+)*)\s*\.?\s*[-–]?\s*/i, ""), typeOf(it.label));
+      const d = dimsOf(l);
+      if (d) addCompo(d);
+      fraisLabel = !d;
+      continue;
+    }
+    /* Libellé dupliqué par la mise en page (« Miroir Miroir », « Cuve Cuve et mitigeur »…) → nouveau poste */
+    const dup = l.match(/^([A-Za-zÀ-ü'’\- ]{3,30}?)\s+\1\b\s*(.*)$/i);
+    if (dup && !/^(vasque|cuve|mitigeur|peinture|mise en|tapisserie|livraison|remise|variante)/i.test(dup[1])){
+      pushMeuble();
+      meuble = freshMeuble("", dup[1] + (dup[2] ? " — " + nomDepuis(dup[2]) : ""), typeOf(l));
+      meuble.nom = meuble.nom.replace(/\s*—\s*$/, "");
+      const d = dimsOf(l); if (d) addCompo(d);
+      fraisLabel = !d;
+      continue;
+    }
+    if (!meuble){
+      /* Poste sans numéro ni code : ligne courte avec un type reconnaissable (hors plomberie) */
+      const t = typeOf(l);
+      if (t !== AD && l.length < 70 && !/^(vasque|cuve|mitigeur)\b/i.test(l)
+          && !/^(Fabrication|Fourniture|Mise en|Remplissage|Plan de|Pose |Caissons?|Fa[çc]ades?|Charni|Montants?|Partie|Ouverture|Finition|Ext[ée]rieur|Int[ée]rieur)/i.test(l)){
+        meuble = freshMeuble("", l, t);
+        const d = dimsOf(l); if (d) addCompo(d);
+      }
+      continue;
+    }
+
+    /* Titre descriptif sans code interne, juste après un libellé court (ex « Placard SDB invité L.740x… ») */
+    if (fraisLabel && /L\.\s*±?\s*[\d\/]/.test(l) && !/^\d/.test(l)
+        && !/^(Fabrication|Fourniture|Mise en|Pose |Remplissage|Plan de)/i.test(l)){
+      const better = nomDepuis(l);
+      if (better.length > 2 && better.length < 70){ meuble.nom = better; if (meuble.type === AD) meuble.type = typeOf(l); }
+      const d = dimsOf(l); if (d) addCompo(d);
+      fraisLabel = false;
+      continue;
+    }
+    fraisLabel = false;
+    const low = l.toLowerCase();
+    /* Plomberie / options / variantes → notes, pas de nouveau meuble */
+    if (/^(vasque|cuve|mitigeur)\b/i.test(l)){ addNote(l); continue; }
+    if (/^en option$/i.test(low)){ addNote("EN OPTION"); continue; }
+    if (/^variante/i.test(low)){ addNote("VARIANTE : " + l); continue; }
+    if (/mise en peinture/.test(low)){ markPeint(); continue; }
+
+    /* Peinture atelier avec fournisseur */
+    const pei = l.match(/Peinture\s+(Ressources?|Little\s*Greene|Farrow\s*&?\s*Ball|Tollens)\s+([^,;]+)/i);
+    if (pei){
+      const four = /ressource/i.test(pei[1]) ? "Ressource" : pei[1].trim();
+      meuble.peintureFournisseur = four; meuble.peintureRef = pei[2].trim();
+      markPeint();
+      continue;
+    }
+    /* Caisson : mélaminé, standard/sur mesure, fournisseur + réf décor */
+    if (/m[ée]lamin[ée]/.test(low)){
+      meuble.caissonConstr = /standards?\b/.test(low) ? "Standard à recouper" : "Sur mesure";
+      meuble.caissonMat = "Mélaminé";
+      const four = l.match(/\b(Egger|Unilin|Polyrey|Fenix)\b/i);
+      if (four) meuble.caissonFournisseur = four[1][0].toUpperCase() + four[1].slice(1).toLowerCase();
+      const ref = l.match(/\b([UWFH]\s?\d{3,4})\b/);
+      if (ref){
+        let decor = "";
+        if (four){
+          const iF = l.indexOf(four[1]) + four[1].length, iR = l.indexOf(ref[1]);
+          if (iR > iF) decor = l.slice(iF, iR).replace(/[^A-Za-zÀ-üà-ü' ]/g, " ").replace(/\s+/g, " ").trim();
+        }
+        meuble.caissonRef = (ref[1].replace(/\s/g, "") + (decor ? " " + decor : "")).trim();
+      } else if (/evola/i.test(l)){ const ev = l.match(/Evola\s+[A-Za-zÀ-ü]+/i); if (ev) meuble.caissonRef = ev[0]; }
+    }
+    if (/caissons? standards?/.test(low) && meuble.caissonConstr === AD) meuble.caissonConstr = "Standard à recouper";
+    if (/cp marine/.test(low)){
+      meuble.caissonConstr = "Sur mesure"; meuble.caissonMat = "Multiplex / CP";
+      const cm = l.match(/CP marine\s*\S*/i); if (cm) meuble.caissonNote = cm[0];
+    }
+    /* Façade : matières & types */
+    if (/(pr[êe]t [àa] peindre|mdf brut)/.test(low)){
+      meuble.facadeMat = "MDF";
+      if (!meuble.mdfFinitions.includes("Brut")) meuble.mdfFinitions.push("Brut");
+    } else if (/\bmdf\b/.test(low) && !/tablette|[ée]tag[èe]re|soubassement/.test(low) && meuble.facadeMat === AD) meuble.facadeMat = "MDF";
+    if (/plaqu[ée]e? (ch[êe]ne|bois|noyer)/.test(low)){
+      if (/fa[çc]ade|porte|visible|habillage/.test(low) || meuble.facadeMat === AD) meuble.facadeMat = "Plaqué bois";
+      const es = l.match(/plaqu[ée]e?\s+(\S+)/i);
+      if (es){ const ess = es[1].replace(/[,.;:]+$/, ""); if (!(meuble.facadeNote || "").includes(ess)) meuble.facadeNote = ((meuble.facadeNote ? meuble.facadeNote + " · " : "") + "plaqué " + ess); }
+    }
+    if (/pin massif/.test(low) && meuble.facadeMat === AD) meuble.facadeMat = "Pin massif";
+    if (/[ée]pic[ée]a massif/.test(low)) meuble.facadeMat = ensureRef("facadeMat", "Épicéa massif", AD);
+    if (/ch[êe]ne massif/.test(low) && meuble.facadeMat === AD) meuble.facadeMat = "Chêne massif";
+    if (/stratifi[ée]/.test(low) && /fa[çc]ade|habillage|plan de travail|visible/.test(low)){
+      meuble.facadeMat = "Stratifié";
+      const sref = l.match(/stratifi[ée]\s+(?:type\s+)?(F\s?\d{3,4}\s+[A-Za-zÀ-ü]+|Laminati\s+\d{3,5}\s+\S+|(?:Egger|Unilin|Polyrey|Fenix|Formica|Abet)\s+\S+(?:\s+\S+)?|[A-Z]\d{3,4}\s+[A-Za-zÀ-ü]+)/i);
+      if (sref){
+        meuble.facadeRef = sref[1].replace(/\s+/g, " ").trim();
+        if (/^F\s?\d/i.test(sref[1])) meuble.facadeFournisseur = ensureRef("fournisseurs", "Formica", AD);
+        else if (/laminati/i.test(sref[1])) meuble.facadeFournisseur = ensureRef("fournisseurs", "Abet Laminati", AD);
+        else { const sf = sref[1].match(/^(Egger|Unilin|Polyrey|Fenix|Formica|Abet)/i); if (sf) meuble.facadeFournisseur = ensureRef("fournisseurs", sf[1][0].toUpperCase() + sf[1].slice(1).toLowerCase(), AD); }
+        if (/laminati/i.test(sref[1])) meuble.facadeRef = sref[1].replace(/^Laminati\s+/i, "").trim();
+      }
+    }
+    if (/rainur/.test(low)) meuble.facadeType = "Rainurée";
+    else if (/cadre (fin )?rapport[ée]|avec (petit )?cadre|mdf avec cadre/.test(low)) meuble.facadeType = "Cadre";
+    if (/cintr[ée]e?/.test(low) && !/^\d/.test(l) && meuble.facadeType === AD) meuble.facadeType = "Cintrée";
+    if (/fa[çc]ade miroir/.test(low)){ meuble.facadeType = "Cadre + remplissage"; meuble.remplissageType = "Miroir"; }
+    /* Finitions */
+    if (/huil[ée]/.test(low)){
+      meuble.finition = "Huilé (Rubio)";
+      if (/blanchi/.test(low)) meuble.huileTeinte = "White";
+      if (/teint[ée]?\s*(fonc[ée]|[àa] confirmer)|teinte [àa] confirmer/.test(low)) addNote(l);
+    }
+    if (/vernis/.test(low)) meuble.finition = "Vernis";
+    /* Tissu / cannage / remplissages */
+    const tis = l.match(/tissus?\s+(Nobilis|Elitis|Elitus|Pierre\s*Frey|Casamance)\s+(.+?)(?:$|\s{2,})/i);
+    if (tis){
+      meuble.facadeType = meuble.facadeType === AD ? "Cadre + remplissage" : meuble.facadeType;
+      if (meuble.facadeType === "Cadre + remplissage") meuble.remplissageType = "Tissu";
+      meuble.tissuFournisseur = ensureRef("tissuFournisseurs", tis[1].replace(/Elitus/i, "Elitis").replace(/\s+/g, " "), AD);
+      meuble.tissuRef = tis[2].trim();
+    } else if (/cannage/.test(low)){ meuble.facadeType = "Cadre + remplissage"; meuble.remplissageType = "Cannage"; }
+    /* Miroirs */
+    if (/miroir/.test(low)){
+      if (meuble.type === "Miroir"){
+        if (/film[ée]/.test(low) && !meuble.miroirSpecs.includes("Filmé")) meuble.miroirSpecs.push("Filmé");
+        if (/biseaut[ée]/.test(low)) addNote("Miroir biseauté");
+        const ep = l.match(/[ée]p\.?\s*(\d)\s*mm/); if (ep) meuble.miroirEp = ep[1] + " mm";
+      } else if (/fond|dans porte|partie haute|contour/.test(low) && !/^\d/.test(l)) addNote(l);
+    }
+    /* Poignées */
+    const poi = l.match(/(Corston\s+\S+|Viefe\s+\S+|Graf?f\s+\S*)/i);
+    if (poi){ meuble.poigneeType = "Bouton de porte"; meuble.poigneeRef = poi[1].replace(/graff/i, "Graf").trim(); }
+    if (/boutons? graf/.test(low)){ meuble.poigneeType = "Bouton de porte"; meuble.poigneeRef = meuble.poigneeRef || "Graf"; }
+    else if (/ouverture par bouton|\bbouton\b/.test(low) && meuble.poigneeType === AD) meuble.poigneeType = "Bouton de porte";
+    if (/prise de main|prise de doigt/.test(low)) meuble.poigneeType = "Prise de doigt";
+    if (/poign[ée]es? fournies? par le client/.test(low)) meuble.poigneeType = "Fournie par le client";
+    if (/poign[ée]e sur mesure/.test(low)) meuble.poigneeNote = (meuble.poigneeNote ? meuble.poigneeNote + " · " : "") + "Poignée sur mesure";
+    const nb = l.match(/(\d+)\s*(unit[ée]s?|poign[ée]es?)/i);
+    if (nb) meuble.nbPoignees = nb[1];
+    /* Quincaillerie */
+    /* Quincaillerie SPÉCIALE uniquement (le standard atelier n'est plus listé) */
+    if (/hawa/.test(low)) addQuinc(/escamotable|concepta/.test(low) ? "Rail Hawa escamotable" : "Rail Hawa coulissant", AD);
+    else if (/escamotable/.test(low)) addQuinc("Système escamotable", AD);
+    if (/galandage/.test(low)) addQuinc("Coulissant à galandage", AD);
+    if (/charni[èe]re.{0,20}(noir|invisible|165)/.test(low)) addQuinc(
+      /noir/.test(low) ? "Charnière noire" : (/invisible|tectus/.test(low) ? "Charnière invisible" : "Charnière 165°"), AD);
+    if (/air salin/.test(low)) addNote(l);
+    /* Tringle & LED */
+    if (/tringle|penderie/.test(low)) meuble.tringle = true;
+    if (/\bled/.test(low)){
+      meuble.led = true;
+      if (/sous [ée]tag/.test(low)) meuble.ledEmpl = ensureRef("ledEmpl", "Sous étagères", AD);
+      else if (/joue/.test(low)) meuble.ledEmpl = "Joues à la verticale";
+    }
+    /* Notes & points d'attention */
+    if (/attention|non fournis?|non pr[ée]vu|hors lot|double fond|r[ée]servation|ballon|[àa] confirmer|pr[ée]voir renfort|renfort dans le mur|estimation|en attente de plans|pas d'[ée]l[ée]vation|non compris/i.test(l)){
+      addNote(l);
+    }
+    /* Composition */
+    if (/^\d+\s+(colonnes?|caissons?|espaces?|sous[- ]?[ée]viers?|structures?|t[êe]tes?|joues?|tablettes?|dessus|corniches?|r[ée]servations?|manteaux?|consoles?|portes?|tiroirs?|[ée]tag[èe]res?|banquettes?|bureaux?|penderies?|niches?|plateaux?|pieds?|jambages?|cadres?|miroirs?|fonds?|s[ée]parations?|montants?|traverses?|meubles?|vaisseliers?|biblioth[èe]ques?|[ée]l[ée]ments?|grandes?\s+portes?|petits?\s+tiroirs?|ensembles?|cintr[ée]s)/i.test(l)
+        || /^(Raidisseurs?|Fileurs?|Suite \d|Plinthes?|Bandeaux?|Moulures?|Boudins?|[ÉE]paisseur|[ÉE]tag[èe]res? (en|ouvertes)|Mur |C[ôo]t[ée] |Bibli|Espace pour|Pour chaque)/i.test(l)
+        || (meuble.type === "Miroir" && /L\.\s*±?\s*[\d\/]/.test(l) && !/^(Fourniture|Fabrication|Pose)/i.test(l))){
+      addCompo(stripPrix(l));
+    }
+  }
+  pushZone();
+  return zones;
+}
+
+/* ---- Import d'un ou plusieurs devis PDF ---- */
+async function importDevisPDFs(files){
+  const btn = document.getElementById("btnPdf");
+  btn.disabled = true;
+  const zonesAll = [];
+  const echecs = [];
+  try {
+    for (let i = 0; i < files.length; i++){
+      const f = files[i], num = "Devis " + (i + 1) + "/" + files.length;
+      setStatus("wait", num + " — lecture et analyse de « " + f.name + " »…");
+      let text = "";
+      try { text = await extractPdfText(f); }
+      catch(e){ echecs.push(f.name + " : " + (e.message || e)); continue; }
+      if (!text || text.trim().length < 40){ echecs.push(f.name + " : PDF sans texte lisible (scan image ?)"); continue; }
+      const zs = heuristicParse(text);
+      if (zs.length) zs.forEach(z => zonesAll.push(z));
+      else echecs.push(f.name + " : aucun agencement identifié dans ce document");
+    }
+    const nbAg = zonesAll.reduce((s, z) => s + z.meubles.length, 0);
+    if (!nbAg) throw new Error(echecs.length ? echecs.join(" ; ") : "aucun agencement extrait");
+    let ajouter = false;
+    if (!ficheEstVide()){
+      ajouter = confirm("Une fiche est déjà en cours.\n\nOK → AJOUTER les zones importées à la suite de la fiche actuelle.\nAnnuler → REMPLACER les zones actuelles par celles importées.");
+    }
+    state.zones = ajouter ? state.zones.concat(zonesAll) : zonesAll;
+    renderChantier(); renderZones(); saveAutoNow();
+    let msg = "Import terminé : " + zonesAll.length + " zone(s), " + nbAg + " agencement(s)" + (ajouter ? " ajoutés à la fiche" : "") + ".";
+    msg += " Vérifiez chaque agencement — les éléments non reconnus sont « À définir » (en rouge à l'impression).";
+    if (echecs.length) setStatus("err", msg + " ÉCHECS : " + echecs.join(" ; "));
+    else setStatus("ok", msg);
+  } catch (err){
+    setStatus("err", "Échec de l'import de devis : " + (err.message || err));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---- Import d'une fiche PDF (imprimée depuis l'outil) ---- */
+function applyFicheImport(d, viaIA){
+  state.chantier = Object.assign({ nom:"", client:"", adresse:"", contact:"", date:"", acces:"Plain-pied", accesPrecision:"" }, d.chantier || {});
+  state.chantier.acces = ensureRef("acces", state.chantier.acces, "Plain-pied");
+  state.generalites = typeof d.generalites === "string" ? d.generalites : "";
+  const zs = (Array.isArray(d.zones) ? d.zones : []).map(z => ({
+    id: uid(), nom: String(z.nom || ""), open: true,
+    meubles: (Array.isArray(z.meubles) && z.meubles.length ? z.meubles : [newMeuble()]).map(viaIA ? sanitizeMeuble : reviveMeuble),
+  }));
+  state.zones = zs.length ? zs : [newZone("")];
+  renderChantier(); renderZones(); saveAutoNow();
+  return state.zones.reduce((s, z) => s + z.meubles.length, 0);
+}
+async function importFichePDF(f){
+  if (!ficheEstVide() && !confirm("Importer cette fiche PDF remplacera la fiche en cours dans ce navigateur.\nPensez à exporter la fiche actuelle (JSON) si besoin.\n\nContinuer ?")) return;
+  const btn = document.getElementById("btnFiche");
+  btn.disabled = true;
+  setStatus("wait", "Lecture de la fiche PDF…");
+  try {
+    const text = await extractPdfText(f);
+    if (!text || text.trim().length < 20) throw new Error("PDF sans texte lisible (scan image ? photo ?). Utilisez le PDF d'origine.");
+    const bloc = text.replace(/\s+/g, "").match(/FICHEDATAv\d+\.([A-Za-z0-9+/=]+)\.FINFICHE/);
+    if (!bloc) throw new Error("bloc de données introuvable dans ce PDF. Seules les fiches imprimées depuis la v8 (avec la page « BLOC DE DONNÉES » à la fin) peuvent être réimportées — vérifiez que cette page n'a pas été retirée du PDF, ou demandez l'export JSON de la fiche.");
+    const d = JSON.parse(b64DecodeUtf8(bloc[1]));
+    const nb = applyFicheImport(d, false);
+    setStatus("ok", "Fiche réimportée à l'identique : " + state.zones.length + " zone(s), " + nb + " agencement(s).");
+  } catch (err){
+    setStatus("err", "Échec de l'import de la fiche : " + (err.message || err));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ================= BRANCHEMENTS ================= */
+document.getElementById("btnPrint").addEventListener("click", () => {
+  try { buildSheet(); window.print(); }
+  catch(e){ setStatus("err", "Erreur lors de la préparation de l'impression : " + (e.message || e)); }
+});
+window.addEventListener("beforeprint", () => { try { buildSheet(); } catch(e){} });
+document.getElementById("btnExportJson").addEventListener("click", exportJSON);
+document.getElementById("btnImportJson").addEventListener("click", () => document.getElementById("fileJson").click());
+document.getElementById("fileJson").addEventListener("change", e => { if (e.target.files[0]) importJSONFile(e.target.files[0]); e.target.value = ""; });
+document.getElementById("btnPdf").addEventListener("click", () => document.getElementById("filePdf").click());
+document.getElementById("filePdf").addEventListener("change", e => { if (e.target.files.length) importDevisPDFs(Array.from(e.target.files)); e.target.value = ""; });
+document.getElementById("btnFiche").addEventListener("click", () => document.getElementById("fileFiche").click());
+document.getElementById("fileFiche").addEventListener("change", e => { if (e.target.files[0]) importFichePDF(e.target.files[0]); e.target.value = ""; });
+document.getElementById("btnAddZone").addEventListener("click", () => { state.zones.push(newZone("")); renderZones(); });
+
+/* Ouverture : page vierge ; si une fiche est sauvegardée, on PROPOSE de la reprendre */
+renderChantier();
+renderZones();
+initResume();
+</script>
+</body>
+</html>
