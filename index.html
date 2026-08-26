@@ -199,7 +199,7 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7
 const deep = (o) => JSON.parse(JSON.stringify(o));
 
 const DEFAULT_REFS = {
-  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
+  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Habillage mural","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
   elementTypes: [AD,"Tablette","Bureau","Miroir","Piètement"],
   livraisons: [AD,"Monté","Partiellement monté","À plat (démonté)"],
   acces: ["Plain-pied","Escalier","Ascenseur","Monte-charge","Grue nécessaire","Autre"],
@@ -251,17 +251,17 @@ const DEFAULT_CASCADES = {
 const MAT_SANS_FINITION = [AD,"—","Mélaminé","Stratifié","CP marine"];
 /* Matières façade avec cascade fournisseur -> réf (mêmes bases de panneaux) */
 const MAT_CASCADE = ["Mélaminé","Stratifié"];
-const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Manteau de cheminée","Console cache-clim","Piètement"];
+const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Habillage mural","Manteau de cheminée","Console cache-clim","Piètement"];
 const PDT_OPTIONS = ["Rainurage","Cuve","Robinet","Prises","Plaque"];
 const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Lave-vaisselle","Micro-ondes","Évier","Cave à vin","Autre"];
 const estPdt = (m) => m.type === "Plan de travail";
 const estCuisine = (m) => m.type === "Cuisine";
 const MIROIR_SPECS = ["Filmé","Perçage","Arrondi","Biseauté","Cadre"];
 /* Sections masquées selon le type d'agencement (cf. arbre des choix) */
-const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Plan de travail"];
+const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Habillage mural","Plan de travail"];
 const SANS_LED = ["Miroir","Piètement","Manteau de cheminée","Banquette","Plan de travail"];
 const SANS_QUINC = ["Miroir","Piètement","Manteau de cheminée"];
-const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette","Bureau"];
+const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette"];
 /* Accès unifié aux déclinaisons de matière : mêmes choix en Caisson et en Façade */
 const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect" };
 const K_CAISSON = { mat:"caissonMat", four:"caissonFournisseur", ref:"caissonRef", mdf:"caissonMdfFinitions", fin:"caissonFinition", vernis:"caissonVernisType", huile:"caissonHuileTeinte", pFour:"caissonPeintureFournisseur", pRef:"caissonPeintureRef", pAsp:"caissonPeintureAspect" };
@@ -1373,7 +1373,7 @@ function heuristicParse(text){
     [/placard|vestiaire/i,"Placard"],[/biblioth/i,"Bibliothèque"],[/chemin[ée]e/i,"Manteau de cheminée"],
     [/[ée]tag[èe]re/i,"Étagère"],[/cache[- ]?clim|console/i,"Console cache-clim"],[/cuisine|buanderie/i,"Cuisine"],
     [/banquette/i,"Banquette"],[/bureau/i,"Bureau"],[/salle de bain|meuble (sous[- ])?vasques?|sous[- ]vasque|meuble wc/i,"Salle de bain"],
-    [/soubassement/i,"Soubassement"],[/pi[èe]tement/i,"Piètement"],[/tablette/i,"Tablette"],
+    [/soubassement/i,"Soubassement"],[/habillage mural|habillage de mur|panneau mural/i,"Habillage mural"],[/pi[èe]tement/i,"Piètement"],[/tablette/i,"Tablette"],
     [/miroir/i,"Miroir"],[/plan de travail|plan de tra/i,"Plan de travail"],
   ];
   const typeOf = (s) => { for (const [re, t] of TYPE_MAP) if (re.test(s)) return t; return AD; };
