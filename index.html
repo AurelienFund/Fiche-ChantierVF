@@ -175,12 +175,31 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
 <script>
 /* ================= CONSTANTES ================= */
 const APP_VERSION = "v8";
+/* Stockage : localStorage quand il est accessible (page hébergée, fichier local),
+   sinon repli en mémoire pour que l'outil reste utilisable en aperçu sandboxé.
+   Dans ce cas, les données vivent le temps de la session : à exporter en JSON ou PDF. */
+const STORE = (function(){
+  try {
+    const t = "__fc_test__";
+    window.localStorage.setItem(t, "1");
+    window.localStorage.removeItem(t);
+    return window.localStorage;
+  } catch(e){
+    const mem = Object.create(null);
+    return {
+      volatile: true,
+      getItem: k => (k in mem ? mem[k] : null),
+      setItem: (k, v) => { mem[k] = String(v); },
+      removeItem: k => { delete mem[k]; },
+    };
+  }
+})();
 const AD = "À définir";
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const deep = (o) => JSON.parse(JSON.stringify(o));
 
 const DEFAULT_REFS = {
-  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
+  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
   elementTypes: [AD,"Tablette","Bureau","Miroir","Piètement"],
   livraisons: [AD,"Monté","Partiellement monté","À plat (démonté)"],
   acces: ["Plain-pied","Escalier","Ascenseur","Monte-charge","Grue nécessaire","Autre"],
@@ -232,14 +251,14 @@ const DEFAULT_CASCADES = {
 const MAT_SANS_FINITION = [AD,"—","Mélaminé","Stratifié","CP marine"];
 /* Matières façade avec cascade fournisseur -> réf (mêmes bases de panneaux) */
 const MAT_CASCADE = ["Mélaminé","Stratifié"];
-const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Manteau de cheminée","Console cache-clim","Piètement"];
+const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Manteau de cheminée","Console cache-clim","Piètement"];
 const PDT_OPTIONS = ["Rainurage","Cuve","Robinet","Prises","Plaque"];
 const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Lave-vaisselle","Micro-ondes","Évier","Cave à vin","Autre"];
 const estPdt = (m) => m.type === "Plan de travail";
 const estCuisine = (m) => m.type === "Cuisine";
 const MIROIR_SPECS = ["Filmé","Perçage","Arrondi","Biseauté","Cadre"];
 /* Sections masquées selon le type d'agencement (cf. arbre des choix) */
-const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Plan de travail"];
+const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Plan de travail"];
 const SANS_LED = ["Miroir","Piètement","Manteau de cheminée","Banquette","Plan de travail"];
 const SANS_QUINC = ["Miroir","Piètement","Manteau de cheminée"];
 const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette","Bureau"];
@@ -279,14 +298,16 @@ let state = {
   refs: deep(DEFAULT_REFS),
   cascades: deep(DEFAULT_CASCADES),
   usage: {},
+  typesSimples: [],   /* types ajoutés par l'utilisateur en mode « simple » */
 };
 function saveRefs(){
-  try { localStorage.setItem("ficheChantierBase",
-    JSON.stringify({ refs: state.refs, cascades: state.cascades, usage: state.usage, seen: DEFAULT_REFS })); } catch(e){}
+  try { STORE.setItem("ficheChantierBase",
+    JSON.stringify({ refs: state.refs, cascades: state.cascades, usage: state.usage,
+      typesSimples: state.typesSimples, seen: DEFAULT_REFS })); } catch(e){}
 }
 function loadRefs(){
   try {
-    const saved = JSON.parse(localStorage.getItem("ficheChantierBase"));
+    const saved = JSON.parse(STORE.getItem("ficheChantierBase"));
     if (!saved) return;
     /* « seen » = choix par défaut connus lors de la dernière sauvegarde. Tout choix par défaut
        AJOUTÉ depuis (nouvelle version de l'outil) est réintégré ; ceux que l'utilisateur a
@@ -310,6 +331,7 @@ function loadRefs(){
       }
     }
     if (saved.usage) state.usage = saved.usage;
+    if (Array.isArray(saved.typesSimples)) state.typesSimples = dedupeListe(saved.typesSimples, []);
   } catch(e){}
 }
 function cascadeListe(group, key){
@@ -329,7 +351,7 @@ function saveAutoNow(){
     hideResume();                 /* saisie réelle : la nouvelle fiche remplace l'ancienne sauvegarde */
   }
   try {
-    localStorage.setItem(AUTOKEY, JSON.stringify({
+    STORE.setItem(AUTOKEY, JSON.stringify({
       v: APP_VERSION, savedAt: new Date().toISOString(),
       chantier: state.chantier, generalites: state.generalites, zones: state.zones,
     }));
@@ -339,7 +361,7 @@ function resumeVisible(){ const b = document.getElementById("resumeBox"); return
 function hideResume(){ const b = document.getElementById("resumeBox"); if (b) b.innerHTML = ""; }
 function peekAuto(){
   try {
-    const d = JSON.parse(localStorage.getItem(AUTOKEY));
+    const d = JSON.parse(STORE.getItem(AUTOKEY));
     if (!d) return null;
     const nonVide = (d.zones || []).some(z => z.nom || (z.meubles || []).some(m => m.nom || m.code || (m.type && m.type !== AD)))
       || (d.chantier && (d.chantier.nom || d.chantier.client || d.chantier.adresse || d.chantier.date || d.chantier.contact)) || d.generalites;
@@ -359,14 +381,14 @@ function initResume(){
       setStatus("ok", "Fiche précédente reprise — la sauvegarde continue automatiquement.");
     } }, "Reprendre cette fiche"),
     el("button", { class: "btn mini", style: "margin-left:6px", onclick: () => {
-      try { localStorage.removeItem(AUTOKEY); } catch(e){}
+      try { STORE.removeItem(AUTOKEY); } catch(e){}
       hideResume();
     } }, "Repartir de zéro (efface la sauvegarde)")));
 }
 function saveAuto(){ clearTimeout(autoTimer); autoTimer = setTimeout(saveAutoNow, 400); }
 function loadAuto(){
   try {
-    const d = JSON.parse(localStorage.getItem(AUTOKEY));
+    const d = JSON.parse(STORE.getItem(AUTOKEY));
     if (!d) return false;
     state.chantier = Object.assign({ nom:"", client:"", adresse:"", contact:"", date:"", acces:"Plain-pied", accesPrecision:"" }, d.chantier);
     state.generalites = typeof d.generalites === "string" ? d.generalites : "";
@@ -428,6 +450,7 @@ function bulle(m, key){
 function makeSelect(listKeyOrGet, value, onPick, usageKey){
   const getList = typeof listKeyOrGet === "string" ? () => state.refs[listKeyOrGet] : listKeyOrGet;
   const uKey = usageKey || (typeof listKeyOrGet === "string" ? listKeyOrGet : "");
+  const estListeTypes = (listKeyOrGet === "types");
   const sel = el("select", { class: "inp" });
   const paint = () => { sel.classList.toggle("ad-val", sel.value === AD); };
   const rebuild = () => {
@@ -442,20 +465,36 @@ function makeSelect(listKeyOrGet, value, onPick, usageKey){
       else opts.unshift(value);
     }
     opts.forEach(o => sel.appendChild(el("option", { value: o }, o)));
-    sel.appendChild(el("option", { value: "__add__", class: "opt-add" }, "＋ Ajouter un choix…"));
+    if (estListeTypes){
+      sel.appendChild(el("option", { value: "__add__", class: "opt-add" }, "＋ Ajouter un type détaillé…"));
+      sel.appendChild(el("option", { value: "__addsimple__", class: "opt-add" }, "＋ Ajouter un type simple…"));
+    } else {
+      sel.appendChild(el("option", { value: "__add__", class: "opt-add" }, "＋ Ajouter un choix…"));
+    }
     sel.appendChild(el("option", { value: "__del__", class: "opt-add" }, "－ Retirer un choix…"));
     sel.value = value;
     paint();
   };
   rebuild();
   sel.addEventListener("change", () => {
-    if (sel.value === "__add__"){
-      const v = (prompt("Nouveau choix à ajouter dans la liste (conservé dans votre base) :") || "").trim();
+    if (sel.value === "__add__" || sel.value === "__addsimple__"){
+      const simple = (sel.value === "__addsimple__");
+      const invite = estListeTypes
+        ? (simple
+            ? "Nouveau type SIMPLE (aménagement ou élément simple : matière & finition, quincaillerie, LED,\ncomposition et notes — comme Tête de lit ou Étagère).\n\nNom du type :"
+            : "Nouveau type DÉTAILLÉ (agencement complet : caisson, façade, poignées, tringle, LED…\ncomme Dressing ou Placard).\n\nNom du type :")
+        : "Nouveau choix à ajouter dans la liste (conservé dans votre base) :";
+      const v = (prompt(invite) || "").trim();
       if (v){
         const list = getList();
         const exist = memeChoix(list, v);
         if (exist) value = exist;          /* déjà présent (accents/casse près) : on le réutilise */
         else { list.push(v); value = v; }
+        if (estListeTypes){
+          /* mémorise le mode du type : simple ou détaillé */
+          state.typesSimples = (state.typesSimples || []).filter(t => normKey(t) !== normKey(value));
+          if (simple) state.typesSimples.push(value);
+        }
         bump(uKey, value);
         saveRefs();
       }
@@ -468,6 +507,7 @@ function makeSelect(listKeyOrGet, value, onPick, usageKey){
       const idx = parseInt(rep, 10) - 1;
       if (!isNaN(idx) && idx >= 0 && idx < list.length){
         const removed = list.splice(idx, 1)[0];
+        if (estListeTypes) state.typesSimples = (state.typesSimples || []).filter(t => normKey(t) !== normKey(removed));
         saveRefs();
         if (value === removed) value = list[0];
       }
@@ -484,7 +524,9 @@ function makeSelect(listKeyOrGet, value, onPick, usageKey){
 
 /* ================= RENDU ================= */
 const zonesBox = document.getElementById("zonesBox");
-const estSimple = (m) => TYPES_SIMPLES.includes(m.type);
+/* Un type est « simple » s'il est livré comme tel, ou s'il a été créé en mode simple par l'utilisateur */
+const estSimple = (m) => memeChoix(TYPES_SIMPLES, m.type) !== undefined
+  || memeChoix(state.typesSimples || [], m.type) !== undefined;
 const estMiroir = (m) => m.type === "Miroir";
 const matAFinir = (mat) => !MAT_SANS_FINITION.includes(mat);
 
@@ -1129,6 +1171,8 @@ function importJSONFile(f){
         }
       }
       if (d.usage) state.usage = d.usage;
+      if (Array.isArray(d.typesSimples))
+        d.typesSimples.forEach(t => { if (!memeChoix(state.typesSimples, t)) state.typesSimples.push(t); });
       saveRefs();
       renderChantier(); renderZones();
       setStatus("ok", "Fiche importée.");
@@ -1689,6 +1733,10 @@ document.getElementById("btnAddZone").addEventListener("click", () => { state.zo
 renderChantier();
 renderZones();
 initResume();
+if (STORE.volatile){
+  setStatus("err", "Aperçu sans stockage permanent : la fiche ne sera pas conservée après fermeture de cette page. " +
+    "Exportez en JSON ou imprimez en PDF pour garder votre travail. La version en ligne, elle, sauvegarde automatiquement.");
+}
 </script>
 </body>
 </html>
