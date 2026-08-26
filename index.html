@@ -112,9 +112,12 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
   .p-notes-box{border:1.5px solid #C22B1E;border-radius:4px;background:#FDF3F2;padding:4px 8px}
   .p-notes-box .p-sec-t{color:#C22B1E;border-bottom-color:#F3C9C4}
   .p-notes-box .p-mono{color:#A81F14;font-weight:700;font-size:10.5px}
-  .p-data{page-break-before:always;border-top:2px solid #DED8CB;margin-top:8px;padding-top:5px}
-  .p-data-t{font-family:'Archivo',sans-serif;font-size:8px;color:#8A8272;letter-spacing:.5px;margin-bottom:3px}
-  .p-data-b{font-family:'IBM Plex Mono',monospace;font-size:4pt;line-height:1.15;color:#B5AE9F;word-break:break-all;white-space:normal}
+  /* Bloc de données : invisible à l'œil et à l'impression papier (texte blanc, 1pt),
+     mais toujours lu par « Importer une fiche PDF ». Aucune page ni titre supplémentaires. */
+  .p-data{margin:0;padding:0;border:0}
+  .p-data-t{display:none}
+  .p-data-b{font-family:'IBM Plex Mono',monospace;font-size:1pt;line-height:1;color:#FFFFFF;
+    word-break:break-all;white-space:normal;letter-spacing:0;opacity:0;user-select:none}
 }
 @media(max-width:640px){.grid{flex-direction:column}.fld,.fld.fix{min-width:100%;width:100%!important}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -1076,9 +1079,8 @@ function buildSheet(){
       v: APP_VERSION, chantier: state.chantier, generalites: state.generalites,
       zones: state.zones.map(z => ({ nom: z.nom, meubles: z.meubles.map(compactMeuble) })),
     };
+    /* Données de réimportation : invisibles sur la fiche, lues par « Importer une fiche PDF » */
     sheet.appendChild(el("div", { class: "p-data" },
-      el("div", { class: "p-data-t" },
-        "BLOC DE DONNÉES — cette page permet de réimporter la fiche dans l'outil (bouton « Importer une fiche PDF »). Conservez-la dans le PDF, ne l'imprimez pas sur papier si inutile."),
       el("div", { class: "p-data-b" }, "FICHEDATA" + APP_VERSION + "." + b64EncodeUtf8(JSON.stringify(payload)) + ".FINFICHE")));
   } catch(e){}
 }
@@ -1375,6 +1377,7 @@ function heuristicParse(text){
     [/banquette/i,"Banquette"],[/bureau/i,"Bureau"],[/salle de bain|meuble (sous[- ])?vasques?|sous[- ]vasque|meuble wc/i,"Salle de bain"],
     [/soubassement/i,"Soubassement"],[/habillage mural|habillage de mur|panneau mural/i,"Habillage mural"],[/pi[èe]tement/i,"Piètement"],[/tablette/i,"Tablette"],
     [/miroir/i,"Miroir"],[/plan de travail|plan de tra/i,"Plan de travail"],
+    [/escalier|marche(s)? d'escalier|limon/i,"Escalier"],
   ];
   const typeOf = (s) => { for (const [re, t] of TYPE_MAP) if (re.test(s)) return t; return AD; };
   const pushMeuble = () => { if (meuble && zone) zone.meubles.push(sanitizeMeuble(meuble)); meuble = null; };
@@ -1413,10 +1416,20 @@ function heuristicParse(text){
     return { code: m2[1].replace(/\s+/g, ""), label: m2[2].trim() };
   };
   const addQuinc = (cat, detail) => {
+    if (!meuble || meuble.type === "Plan de travail" || SANS_QUINC.includes(meuble.type)) return;
     if (!meuble.quincailleries) meuble.quincailleries = [];
     meuble.quincSpec = true;
     if (!meuble.quincailleries.some(q => q.cat === cat && q.detail === detail))
       meuble.quincailleries.push({ cat, detail, finition: AD, ref: "" });
+  };
+  const capteAspect = (l) => {
+    if (!meuble) return;
+    /* pas de \b final : il ne s'applique pas après une lettre accentuée (« satiné ») */
+    const asp = l.match(/\b(mate?|satin[ée]e?|brillante?|velours)(?![a-zà-ÿ])/i);
+    if (!asp) return;
+    const a = asp[1].toLowerCase();
+    meuble.peintureAspect = a.startsWith("mat") ? "Mat" : a.startsWith("satin") ? "Satiné"
+      : a.startsWith("brillant") ? "Brillant" : "Velours";
   };
   const addNote = (t) => { if (meuble && t && !(meuble.notes || "").includes(t)) meuble.notes = (meuble.notes ? meuble.notes + "\n" : "") + t; };
   const addCompo = (t) => { if (meuble && t) meuble.composition += (meuble.composition ? "\n" : "") + t; };
@@ -1462,7 +1475,7 @@ function heuristicParse(text){
     const codeTitle = item ? null : isCodeTitle(l);
     if (item || codeTitle){
       const it = item || codeTitle;
-      if (/^(mise en )?peinture/i.test(it.label) || /^(mise en )?peinture/i.test(l)){ markPeint(); continue; }
+      if (/^(mise en )?peinture/i.test(it.label) || /^(mise en )?peinture/i.test(l)){ markPeint(); capteAspect(l); continue; }
       if (/^tapisserie/i.test(it.label)){
         if (meuble){ meuble.facadeType = "Cadre + remplissage"; meuble.remplissageType = "Tissu"; }
         continue;
@@ -1522,7 +1535,7 @@ function heuristicParse(text){
     if (/^(vasque|cuve|mitigeur)\b/i.test(l)){ addNote(l); continue; }
     if (/^en option$/i.test(low)){ addNote("EN OPTION"); continue; }
     if (/^variante/i.test(low)){ addNote("VARIANTE : " + l); continue; }
-    if (/mise en peinture/.test(low)){ markPeint(); continue; }
+    if (/mise en peinture/.test(low)){ markPeint(); capteAspect(l); continue; }
 
     /* Peinture atelier avec fournisseur */
     const pei = l.match(/Peinture\s+(Ressources?|Little\s*Greene|Farrow\s*&?\s*Ball|Tollens)\s+([^,;]+)/i);
@@ -1532,6 +1545,8 @@ function heuristicParse(text){
       markPeint();
       continue;
     }
+    /* Aspect de la peinture : mat / satiné / brillant / velours */
+    if (/peint|peinture|laqu[ée]/.test(low)) capteAspect(l);
     /* Caisson : mélaminé, standard/sur mesure, fournisseur + réf décor */
     if (/m[ée]lamin[ée]/.test(low)){
       meuble.caissonConstr = /standards?\b/.test(low) ? "Standard à recouper" : "Sur mesure";
@@ -1617,17 +1632,62 @@ function heuristicParse(text){
     /* Quincaillerie */
     /* Quincaillerie SPÉCIALE uniquement (le standard atelier n'est plus listé) */
     if (/hawa/.test(low)) addQuinc(/escamotable|concepta/.test(low) ? "Rail Hawa escamotable" : "Rail Hawa coulissant", AD);
-    else if (/escamotable/.test(low)) addQuinc("Système escamotable", AD);
+    else if (/escamotable/.test(low) && !/prises?|plan de travail/.test(low)) addQuinc("Système escamotable", AD);
     if (/galandage/.test(low)) addQuinc("Coulissant à galandage", AD);
     if (/charni[èe]re.{0,20}(noir|invisible|165)/.test(low)) addQuinc(
       /noir/.test(low) ? "Charnière noire" : (/invisible|tectus/.test(low) ? "Charnière invisible" : "Charnière 165°"), AD);
     if (/air salin/.test(low)) addNote(l);
+    /* Électroménager (cuisines) : fourniture et éléments */
+    if (/[ée]lectrom[ée]nager|\blv\b|lave[- ]vaisselle|lave[- ]linge|hotte|frigo|r[ée]frig[ée]rateur|four\b|plaque de cuisson|micro[- ]?onde|cave [àa] vin/.test(low)){
+      const fourniPar = l.match(/\b(Cojer|Coger)\b/i);
+      const nonFourni = /non fourni|hors lot|fourni par le client|par le client/.test(low);
+      if (fourniPar || /[ée]lectrom[ée]nager (fourni|inclus)/.test(low) || (!nonFourni && /^\d*\s*(four|hotte|frigo|plaque)/.test(low))){
+        meuble.electro = true;
+        if (fourniPar) meuble.electroFournisseur = "Cojer";
+        else if (nonFourni) meuble.electroFournisseur = "Client direct";
+      } else if (nonFourni && /[ée]lectrom[ée]nager/.test(low)){
+        meuble.electro = true; meuble.electroFournisseur = "Client direct";
+      }
+      if (meuble.electro){
+        const ajoute = (cond, nom) => {
+          if (cond && !meuble.electroElements.includes(nom)) meuble.electroElements.push(nom);
+        };
+        ajoute(/\bfour\b/.test(low), "Four");
+        ajoute(/hotte/.test(low), "Hotte");
+        ajoute(/frigo|r[ée]frig[ée]rateur/.test(low), "Frigo");
+        ajoute(/\blv\b|lave[- ]vaisselle/.test(low), "Lave-vaisselle");
+        ajoute(/plaque de cuisson|\bplaque\b/.test(low), "Plaque");
+        ajoute(/micro[- ]?onde/.test(low), "Micro-ondes");
+        ajoute(/cave [àa] vin/.test(low), "Cave à vin");
+        ajoute(/[ée]vier/.test(low) && !/sous[- ][ée]vier/.test(low), "Évier");
+      }
+    }
     /* Tringle & LED */
     if (/tringle|penderie/.test(low)) meuble.tringle = true;
     if (/\bled/.test(low)){
       meuble.led = true;
       if (/sous [ée]tag/.test(low)) meuble.ledEmpl = ensureRef("ledEmpl", "Sous étagères", AD);
       else if (/joue/.test(low)) meuble.ledEmpl = "Joues à la verticale";
+    }
+    /* Plan de travail : matière, fournisseur et usinages */
+    if (/plan de travail|plan de tra|cr[ée]dence|plateau (en|de) (pierre|dekton|corian|marbre|granit)/.test(low)){
+      const pdtCible = (meuble.type === "Plan de travail") ? meuble : null;
+      const matPdt = l.match(/\b(Dekton|Corian|Marbre|Granit|Qwartz|Quartz|C[ée]ramique|Inox)\b/i);
+      if (pdtCible && matPdt){
+        const nom = matPdt[1][0].toUpperCase() + matPdt[1].slice(1).toLowerCase();
+        pdtCible.pdtMat = ensureRef("pdtMat", /qwartz|quartz/i.test(nom) ? "Quartz" : nom, AD);
+      }
+      const fourPdt = l.match(/\b(Granico|HMS)\b/i);
+      if (pdtCible && fourPdt) pdtCible.pdtFournisseur = ensureRef("pdtFournisseurs", fourPdt[1].toUpperCase() === "HMS" ? "HMS" : "Granico", AD);
+      if (!pdtCible && /hors lot|non fourni|non pr[ée]vu/.test(low)) addNote(l);
+    }
+    if (meuble.type === "Plan de travail"){
+      const opt = (cond, nom) => { if (cond && !meuble.pdtOptions.includes(nom)) meuble.pdtOptions.push(nom); };
+      opt(/rainurage|rainur[ée]|[ée]gouttoir/.test(low), "Rainurage");
+      opt(/\bcuve\b|[ée]vier encastr/.test(low), "Cuve");
+      opt(/robinet|mitigeur/.test(low), "Robinet");
+      opt(/\bprises?\b/.test(low), "Prises");
+      opt(/plaque de cuisson|d[ée]coupe plaque/.test(low), "Plaque");
     }
     /* Notes & points d'attention */
     if (/attention|non fournis?|non pr[ée]vu|hors lot|double fond|r[ée]servation|ballon|[àa] confirmer|pr[ée]voir renfort|renfort dans le mur|estimation|en attente de plans|pas d'[ée]l[ée]vation|non compris/i.test(l)){
@@ -1703,7 +1763,7 @@ async function importFichePDF(f){
     const text = await extractPdfText(f);
     if (!text || text.trim().length < 20) throw new Error("PDF sans texte lisible (scan image ? photo ?). Utilisez le PDF d'origine.");
     const bloc = text.replace(/\s+/g, "").match(/FICHEDATAv\d+\.([A-Za-z0-9+/=]+)\.FINFICHE/);
-    if (!bloc) throw new Error("bloc de données introuvable dans ce PDF. Seules les fiches imprimées depuis la v8 (avec la page « BLOC DE DONNÉES » à la fin) peuvent être réimportées — vérifiez que cette page n'a pas été retirée du PDF, ou demandez l'export JSON de la fiche.");
+    if (!bloc) throw new Error("données de réimportation introuvables dans ce PDF. Seules les fiches imprimées depuis l'outil peuvent être réimportées (les données y sont incluses de façon invisible). Un PDF scanné, réimprimé ou recomposé les perd : demandez alors l'export JSON de la fiche.");
     const d = JSON.parse(b64DecodeUtf8(bloc[1]));
     const nb = applyFicheImport(d, false);
     setStatus("ok", "Fiche réimportée à l'identique : " + state.zones.length + " zone(s), " + nb + " agencement(s).");
