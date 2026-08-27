@@ -229,6 +229,9 @@ const DEFAULT_REFS = {
   quincFinitions: [AD,"Nickelé","Noir","Inox","Laiton"],
   pdtMat: [AD,"Dekton","Corian","Marbre","Granit","Quartz","Céramique","Inox","Bois massif","Stratifié","Autre"],
   pdtFournisseurs: [AD,"Granico","HMS","Autre"],
+  pdtEssences: [AD,"Chêne","Hêtre","Frêne","Noyer"],
+  pdtEpBois: [AD,"20 mm","30 mm","40 mm"],
+  pdtEps: [AD,"8 mm","12 mm","20 mm","30 mm"],
   electroFournisseurs: [AD,"Cojer","Client direct","Autre"],
   poigneeTypes: [AD,"Bouton de porte","Prise de doigt","Push-pull","Fournie par le client","Sans poignée"],
   poigneeFinitions: [AD,"Laiton","Noir mat","Inox","Chromé","Autre"],
@@ -285,7 +288,8 @@ const newMeuble = () => ({
   mdfFinitions: [], finition: AD, vernisType: AD, huileTeinte: AD,
   peintureFournisseur: AD, peintureRef: AD, peintureAspect: AD,
   quincSpec: false, quincailleries: [], quincNote: "",
-  pdtMat: AD, pdtFournisseur: AD, pdtRef: AD, pdtOptions: [], pdtRefs: {}, pdtNote: "",
+  pdtMat: AD, pdtFournisseur: AD, pdtRef: AD, pdtEssence: AD, pdtEp: AD,
+  pdtOptions: [], pdtRefs: {}, pdtNote: "",
   electro: false, electroFournisseur: AD, electroElements: [], electroRefs: {}, electroNote: "",
   poigneeType: AD, poigneeRef: "", poigneeFinition: AD, poigneePrise: AD, profilRef: AD,
   bequillageRef: AD, nbPoignees: "", poigneeNote: "",
@@ -609,28 +613,47 @@ function checkboxRowRefs(label, options, m, key, refKey, rerender, ph){
         el("label", {},
           el("input", { type: "checkbox", checked: m[key].includes(o),
             onchange: e => {
-              if (e.target.checked){ if (!m[key].includes(o)) m[key].push(o); }
+              if (e.target.checked){
+                if (!m[key].includes(o)) m[key].push(o);
+                if (!m[refKey][o]) m[refKey][o] = AD;   /* réf. à renseigner : « À définir » par défaut */
+              }
               else { m[key] = m[key].filter(x => x !== o); delete m[refKey][o]; }
               rerender();
             } }),
           el("span", {}, o)))),
     m[key].length
       ? el("div", { class: "grid", style: "margin-top:6px" },
-          m[key].map(o => field("Réf. " + o.toLowerCase(),
-            el("input", { class: "inp", value: m[refKey][o] || "", placeholder: ph || "référence, modèle, coloris...",
-              oninput: e => { m[refKey][o] = e.target.value; } }), "220px")))
+          m[key].map(o => {
+            if (!m[refKey][o]) m[refKey][o] = AD;       /* fiches plus anciennes : même règle */
+            const inp = el("input", { class: "inp" + (m[refKey][o] === AD ? " ad-val" : ""),
+              value: m[refKey][o], placeholder: ph || "référence, modèle, coloris...",
+              onfocus: e => { if (e.target.value === AD){ e.target.value = ""; e.target.className = "inp"; } },
+              oninput: e => { m[refKey][o] = e.target.value; e.target.className = "inp"; },
+              onblur: e => {
+                if (!e.target.value.trim()){ m[refKey][o] = AD; e.target.value = AD; e.target.className = "inp ad-val"; }
+              } });
+            return field("Réf. " + o.toLowerCase(), inp, "220px");
+          }))
       : null);
 }
 /* Plan de travail : matière, fournisseur + réf, options d'usinage — mêmes choix partout */
+const estPdtBois = (m) => normKey(m.pdtMat) === normKey("Bois massif");
 function planTravailForm(m, rerender){
   const pc = [
-    field("Matière", makeSelect("pdtMat", m.pdtMat, v => { m.pdtMat = v; }, "pdtMat"), "170px"),
-    field("Fournisseur", makeSelect("pdtFournisseurs", m.pdtFournisseur,
-      v => { m.pdtFournisseur = v; m.pdtRef = AD; rerender(); }, "pdtFournisseurs"), "170px"),
+    field("Matière", makeSelect("pdtMat", m.pdtMat, v => { m.pdtMat = v; rerender(); }, "pdtMat"), "170px"),
   ];
-  if (m.pdtFournisseur !== AD && m.pdtFournisseur !== "—"){
-    pc.push(field("Réf. " + m.pdtFournisseur, makeSelect(() => cascadeListe("planTravail", m.pdtFournisseur),
-      m.pdtRef, v => { m.pdtRef = v; }, "planTravail." + m.pdtFournisseur), "190px"));
+  if (estPdtBois(m)){
+    /* Bois massif : essence et épaisseur remplacent fournisseur et référence */
+    pc.push(field("Essence", makeSelect("pdtEssences", m.pdtEssence, v => { m.pdtEssence = v; }, "pdtEssences"), "160px"));
+    pc.push(field("Épaisseur", makeSelect("pdtEpBois", m.pdtEp, v => { m.pdtEp = v; }, "pdtEpBois"), "150px"));
+  } else {
+    pc.push(field("Fournisseur", makeSelect("pdtFournisseurs", m.pdtFournisseur,
+      v => { m.pdtFournisseur = v; m.pdtRef = AD; rerender(); }, "pdtFournisseurs"), "170px"));
+    if (m.pdtFournisseur !== AD && m.pdtFournisseur !== "—"){
+      pc.push(field("Réf. " + m.pdtFournisseur, makeSelect(() => cascadeListe("planTravail", m.pdtFournisseur),
+        m.pdtRef, v => { m.pdtRef = v; }, "planTravail." + m.pdtFournisseur), "190px"));
+    }
+    pc.push(field("Épaisseur", makeSelect("pdtEps", m.pdtEp, v => { m.pdtEp = v; }, "pdtEps"), "150px"));
   }
   pc.push(el("div", { class: "fld", style: "min-width:100%" },
     checkboxRowRefs("Usinages / équipements :", PDT_OPTIONS, m, "pdtOptions", "pdtRefs", rerender,
@@ -961,6 +984,20 @@ function declMatierePrint(fl, m, K){
     if (m[K.fin] === "Huilé (Rubio)") fl.push(pline("Teinte huile", fv(m[K.huile])));
   } else if (nn(m[K.ref])) fl.push(pline("Réf. décor", fv(m[K.ref])));
 }
+/* Liste d'éléments cochés avec leur référence ; « À définir » ressort en rouge */
+function listeAvecRefs(items, refs){
+  const box = el("span", {});
+  items.forEach((x, i) => {
+    if (i) box.appendChild(document.createTextNode(" · "));
+    box.appendChild(el("span", { class: "p-val" }, x));
+    const r = refs && refs[x];
+    if (!r) return;
+    box.appendChild(document.createTextNode(" ("));
+    box.appendChild(isAD(r) ? el("span", { class: "ad" }, AD) : el("span", { class: "p-val" }, r));
+    box.appendChild(document.createTextNode(")"));
+  });
+  return box;
+}
 function corpsSections(m){
   const secs = [];
   const sec = (title, lines, full) => { if (lines.length) secs.push(el("div", { class: "p-sec" + (full ? " full" : "") }, el("div", { class: "p-sec-t" }, title), lines)); };
@@ -970,19 +1007,18 @@ function corpsSections(m){
     if (m.electro){
       ec.push(pline("Fourni par", fv(m.electroFournisseur)));
       ec.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Éléments : "),
-        m.electroElements.length
-          ? el("span", { class: "p-val" }, m.electroElements.map(x => x + (m.electroRefs && m.electroRefs[x] ? " (" + m.electroRefs[x] + ")" : "")).join(" · "))
-          : el("span", { class: "ad" }, AD)));
+        m.electroElements.length ? listeAvecRefs(m.electroElements, m.electroRefs) : el("span", { class: "ad" }, AD)));
       if (m.electroNote) ec.push(el("div", { class: "p-line p-note" }, "💬 " + m.electroNote));
     } else ec.push(el("div", { class: "p-line" }, "Électroménager non fourni"));
     sec("Électroménager", ec);
   }
   if (estPdt(m)){
-    const pc = [ pline("Matière", fv(m.pdtMat)), pline("Fournisseur", fv(m.pdtFournisseur), nn(m.pdtFournisseur) ? [" ", fv(m.pdtRef)] : "") ];
+    const pc = [ pline("Matière", fv(m.pdtMat)) ];
+    if (estPdtBois(m)) pc.push(pline("Essence", fv(m.pdtEssence)));
+    else pc.push(pline("Fournisseur", fv(m.pdtFournisseur), nn(m.pdtFournisseur) ? [" ", fv(m.pdtRef)] : ""));
+    pc.push(pline("Épaisseur", fv(m.pdtEp)));
     pc.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Usinages : "),
-      m.pdtOptions.length
-        ? el("span", { class: "p-val" }, m.pdtOptions.map(x => x + (m.pdtRefs && m.pdtRefs[x] ? " (" + m.pdtRefs[x] + ")" : "")).join(" · "))
-        : el("span", { class: "ad" }, AD)));
+      m.pdtOptions.length ? listeAvecRefs(m.pdtOptions, m.pdtRefs) : el("span", { class: "ad" }, AD)));
     if (m.pdtNote) pc.push(el("div", { class: "p-line p-note" }, "💬 " + m.pdtNote));
     sec("Plan de travail", pc);
   }
@@ -1326,6 +1362,8 @@ function sanitizeMeuble(m){
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
     electro: !!m.electro, quincSpec: !!m.quincSpec,
     pdtMat: ensureRef("pdtMat", m.pdtMat, AD),
+    pdtEssence: ensureRef("pdtEssences", m.pdtEssence, AD),
+    pdtEp: ensureRef(normKey(m.pdtMat) === normKey("Bois massif") ? "pdtEpBois" : "pdtEps", m.pdtEp, AD),
     pdtFournisseur: ensureRef("pdtFournisseurs", m.pdtFournisseur, AD),
     pdtRef: ensureCascade("planTravail", ensureRef("pdtFournisseurs", m.pdtFournisseur, AD), m.pdtRef, AD),
     electroFournisseur: ensureRef("electroFournisseurs", m.electroFournisseur, AD),
@@ -1709,9 +1747,26 @@ function heuristicParse(text){
       }
       const fourPdt = l.match(/\b(Granico|HMS)\b/i);
       if (pdtCible && fourPdt) pdtCible.pdtFournisseur = ensureRef("pdtFournisseurs", fourPdt[1].toUpperCase() === "HMS" ? "HMS" : "Granico", AD);
+      /* Bois massif : essence à la place du fournisseur */
+      if (pdtCible){
+        const ess = l.match(/\b(ch[êe]ne|h[êe]tre|fr[êe]ne|noyer)\b/i);
+        if (ess && /massif|bois/.test(low)){
+          const e = normKey(ess[1]);
+          pdtCible.pdtMat = ensureRef("pdtMat", "Bois massif", AD);
+          pdtCible.pdtEssence = ensureRef("pdtEssences",
+            e === "chene" ? "Chêne" : e === "hetre" ? "Hêtre" : e === "frene" ? "Frêne" : "Noyer", AD);
+        }
+      }
       if (!pdtCible && /hors lot|non fourni|non pr[ée]vu/.test(low)) addNote(l);
     }
     if (meuble.type === "Plan de travail"){
+      /* Épaisseur : « ép 30mm », « épaisseur 20 mm », « ép. 12mm » */
+      const ep = l.match(/[ée]p(?:aisseur)?\.?\s*(\d{1,3})\s*mm/i);
+      if (ep){
+        const val = ep[1] + " mm";
+        const liste = estPdtBois(meuble) ? "pdtEpBois" : "pdtEps";
+        meuble.pdtEp = ensureRef(liste, val, AD);
+      }
       const opt = (cond, nom) => { if (cond && !meuble.pdtOptions.includes(nom)) meuble.pdtOptions.push(nom); };
       opt(/rainurage|rainur[ée]|[ée]gouttoir/.test(low), "Rainurage");
       opt(/\bcuve\b|[ée]vier encastr/.test(low), "Cuve");
