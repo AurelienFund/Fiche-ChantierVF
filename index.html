@@ -127,8 +127,8 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
      mais toujours lu par « Importer une fiche PDF ». Aucune page ni titre supplémentaires. */
   .p-data{margin:0;padding:0;border:0}
   .p-data-t{display:none}
-  .p-data-b{font-family:'IBM Plex Mono',monospace;font-size:1pt;line-height:1;color:#FFFFFF;
-    word-break:break-all;white-space:normal;letter-spacing:0;opacity:0;user-select:none}
+  .p-data-b{font-family:'IBM Plex Mono',monospace;font-size:2.5pt;line-height:1.05;color:#FFFFFF;
+    word-break:break-all;white-space:normal;letter-spacing:0;user-select:none}
 }
 @media(max-width:640px){.grid{flex-direction:column}.fld,.fld.fix{min-width:100%;width:100%!important}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -1998,6 +1998,30 @@ function applyFicheImport(d, viaIA, ajouter){
   renderChantier(); renderZones(); saveAutoNow();
   return zs.reduce((s, z) => s + z.meubles.length, 0);
 }
+/* Retrouve les données de réimportation dans le texte d'un PDF, en tolérant
+   les espaces, les retours à la ligne et un marqueur de fin perdu à la découpe. */
+function extraireBlocFiche(text){
+  const plat = text.replace(/[\s\u00AD\u200B]+/g, "");   /* espaces, césures et espaces fines */
+  const iDeb = plat.search(/FICHEDATAv\d+\./);
+  if (iDeb < 0){
+    throw new Error("données de réimportation introuvables dans ce PDF. " +
+      "Seules les fiches imprimées depuis l'outil en contiennent (de façon invisible). " +
+      "Un PDF scanné, photographié, réimprimé depuis un autre logiciel ou assemblé les perd. " +
+      "Si la fiche a été imprimée avec une version antérieure à aujourd'hui, réimprimez-la depuis l'outil, " +
+      "ou utilisez son export JSON.");
+  }
+  const reste = plat.slice(iDeb).replace(/^FICHEDATAv\d+\./, "");
+  const fin = reste.indexOf(".FINFICHE");
+  const b64 = (fin >= 0 ? reste.slice(0, fin) : reste).replace(/[^A-Za-z0-9+/=]/g, "");
+  if (!b64) throw new Error("les données de réimportation de ce PDF sont vides ou illisibles.");
+  try {
+    return JSON.parse(b64DecodeUtf8(b64));
+  } catch(e){
+    throw new Error("les données de réimportation de ce PDF sont incomplètes" +
+      (fin < 0 ? " (fin du bloc absente : le PDF a probablement été tronqué ou recomposé)" : "") +
+      ". Réimprimez la fiche depuis l'outil, ou utilisez son export JSON.");
+  }
+}
 async function importFichePDF(f){
   let ajouter = false;
   if (!ficheEstVide()){
@@ -2012,9 +2036,7 @@ async function importFichePDF(f){
   try {
     const text = await extractPdfText(f);
     if (!text || text.trim().length < 20) throw new Error("PDF sans texte lisible (scan image ? photo ?). Utilisez le PDF d'origine.");
-    const bloc = text.replace(/\s+/g, "").match(/FICHEDATAv\d+\.([A-Za-z0-9+/=]+)\.FINFICHE/);
-    if (!bloc) throw new Error("données de réimportation introuvables dans ce PDF. Seules les fiches imprimées depuis l'outil peuvent être réimportées (les données y sont incluses de façon invisible). Un PDF scanné, réimprimé ou recomposé les perd : demandez alors l'export JSON de la fiche.");
-    const d = JSON.parse(b64DecodeUtf8(bloc[1]));
+    const d = extraireBlocFiche(text);
     const nb = applyFicheImport(d, false, ajouter);
     setStatus("ok", ajouter
       ? "Fiche ajoutée à la suite : " + nb + " agencement(s) importé(s). Total : " + state.zones.length +
