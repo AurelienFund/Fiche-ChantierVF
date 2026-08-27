@@ -188,7 +188,7 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
 
 <script>
 /* ================= CONSTANTES ================= */
-const APP_VERSION = "v8";
+const APP_VERSION = "v9";
 /* Stockage : localStorage quand il est accessible (page hébergée, fichier local),
    sinon repli en mémoire pour que l'outil reste utilisable en aperçu sandboxé.
    Dans ce cas, les données vivent le temps de la session : à exporter en JSON ou PDF. */
@@ -1285,17 +1285,18 @@ function exportJSON(){
     JSON.stringify(state, null, 1), "application/json");
 }
 /* Réaligne une valeur enregistrée sur l'orthographe de référence de la liste */
-function alignRef(listKey, v){
-  if (!v || v === AD || v === "—") return v;
+function alignRef(listKey, v, fallback){
+  if (v === undefined || v === null || v === "") return (fallback !== undefined ? fallback : v);
+  if (v === AD || v === "—") return v;
   return memeChoix(state.refs[listKey], v) || v;
 }
 function reviveMeuble(m){
-  return Object.assign(newMeuble(), m, {
+  return complete(Object.assign(newMeuble(), m, {
     id: uid(),
     poignees: (m.poigneeType === "Sans poignée") ? false : (m.poignees !== false),
-    poigneeType: (m.poigneeType === "Sans poignée") ? AD : m.poigneeType,
-    type: alignRef("types", m.type),
-    livraison: alignRef("livraisons", m.livraison),
+    poigneeType: (m.poigneeType === "Sans poignée" || m.poigneeType === undefined) ? AD : m.poigneeType,
+    type: alignRef("types", m.type, AD),
+    livraison: alignRef("livraisons", m.livraison, AD),
     elements: (m.elements || []).map(x => reviveMeuble(Object.assign({}, x, { nom: x.nom || x.detail || "" }))),
     quincailleries: (m.quincailleries || []).map(x => Object.assign(newQuinc(), x, { id: uid() })),
     mdfFinitions: Array.isArray(m.mdfFinitions) ? m.mdfFinitions : [],
@@ -1306,7 +1307,16 @@ function reviveMeuble(m){
     pdtMdfFinitions: Array.isArray(m.pdtMdfFinitions) ? m.pdtMdfFinitions : [],
     electroElements: Array.isArray(m.electroElements) ? m.electroElements : [],
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
-  });
+  }));
+}
+/* Filet de sécurité : tout champ absent ou indéfini reprend sa valeur par défaut */
+function complete(m){
+  const tpl = newMeuble();
+  for (const k in tpl){
+    if (m[k] === undefined || m[k] === null) m[k] = Array.isArray(tpl[k]) ? [] : (tpl[k] && typeof tpl[k] === "object" ? {} : tpl[k]);
+  }
+  (m.elements || []).forEach(complete);
+  return m;
 }
 function importJSONFile(f){
   const r = new FileReader();
@@ -2038,11 +2048,15 @@ async function importFichePDF(f){
     if (!text || text.trim().length < 20) throw new Error("PDF sans texte lisible (scan image ? photo ?). Utilisez le PDF d'origine.");
     const d = extraireBlocFiche(text);
     const nb = applyFicheImport(d, false, ajouter);
-    setStatus("ok", ajouter
+    const vieux = d.v && d.v !== APP_VERSION
+      ? " ATTENTION : cette fiche a été imprimée avec une version antérieure (" + d.v +
+        ") — les champs ajoutés depuis sont vides et restent à compléter."
+      : "";
+    setStatus(vieux ? "err" : "ok", ajouter
       ? "Fiche ajoutée à la suite : " + nb + " agencement(s) importé(s). Total : " + state.zones.length +
         " zone(s), " + state.zones.reduce((s, z) => s + z.meubles.length, 0) + " agencement(s)." +
-        (state.chantier.devis ? " Devis : " + state.chantier.devis + "." : "")
-      : "Fiche réimportée à l'identique : " + state.zones.length + " zone(s), " + nb + " agencement(s).");
+        (state.chantier.devis ? " Devis : " + state.chantier.devis + "." : "") + vieux
+      : "Fiche réimportée à l'identique : " + state.zones.length + " zone(s), " + nb + " agencement(s)." + vieux);
   } catch (err){
     setStatus("err", "Échec de l'import de la fiche : " + (err.message || err));
   } finally {
