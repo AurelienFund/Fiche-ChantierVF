@@ -60,6 +60,9 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
 .badge-liv{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;background:var(--marron);color:#fff;border-radius:3px;padding:3px 8px;white-space:nowrap}
 .badge-liv.ad{background:var(--rouge)}
 .mini{font-size:11px;padding:4px 9px}
+.mini-sel{font-size:11px;padding:4px 8px;border:1px solid var(--ligne);border-radius:4px;
+  background:#FDFCF9;color:var(--encre);font-family:inherit;cursor:pointer;max-width:190px}
+.mini-sel:hover{border-color:var(--marron)}
 .btn[disabled]{opacity:.32;cursor:not-allowed}
 .btn.mini[title^="Monter"],.btn.mini[title^="Descendre"]{font-weight:700;min-width:28px}
 .row-actions{margin-left:auto;display:flex;gap:6px}
@@ -559,10 +562,21 @@ function renderZones(){
 function renderZone(z){
   const nomInput = el("input", { value: z.nom, placeholder: "NOM DE LA ZONE (Suite 1, Cuisine...)",
     onclick: e => e.stopPropagation(), oninput: e => { z.nom = e.target.value; } });
+  const iz = state.zones.findIndex(x => x.id === z.id);
+  const moveZone = (delta) => {
+    const j = iz + delta;
+    if (j < 0 || j >= state.zones.length) return;
+    const tmp = state.zones[iz]; state.zones[iz] = state.zones[j]; state.zones[j] = tmp;
+    renderZones(); saveAutoNow();
+  };
   const head = el("div", { class: "zone-head", onclick: () => { z.open = !z.open; renderZones(); } },
     el("span", { class: "chev" }, z.open ? "▼" : "►"),
     nomInput,
     el("span", { class: "zone-count" }, z.meubles.length + " agencement" + (z.meubles.length > 1 ? "s" : "")),
+    el("button", { class: "btn mini", title: "Monter cette zone", disabled: iz <= 0,
+      onclick: e => { e.stopPropagation(); moveZone(-1); } }, "↑"),
+    el("button", { class: "btn mini", title: "Descendre cette zone", disabled: iz >= state.zones.length - 1,
+      onclick: e => { e.stopPropagation(); moveZone(1); } }, "↓"),
     el("button", { class: "btn mini", onclick: e => { e.stopPropagation(); if (confirm("Supprimer cette zone et ses agencements ?")){ state.zones = state.zones.filter(x => x.id !== z.id); renderZones(); } } }, "Supprimer"));
   const sec = el("section", { class: "zone" }, head);
   if (z.open){
@@ -871,6 +885,22 @@ function renderMeuble(z, m){
             disabled: i >= z.meubles.length - 1, onclick: () => move(1) }, "↓"),
         ];
       })(),
+      (state.zones.length > 1)
+        ? el("select", { class: "sel mini-sel", title: "Déplacer vers une autre zone",
+            onchange: e => {
+              const cible = state.zones.find(x => x.id === e.target.value);
+              if (!cible || cible.id === z.id){ e.target.value = ""; return; }
+              z.meubles = z.meubles.filter(x => x.id !== m.id);
+              cible.meubles.push(m);
+              cible.open = true;
+              renderZones(); saveAutoNow();
+              setStatus("ok", "« " + (m.nom || m.code || "Agencement") + " » déplacé vers la zone « " +
+                (cible.nom || "sans nom") + " ».");
+            } },
+            el("option", { value: "" }, "↔ Déplacer vers…"),
+            state.zones.filter(x => x.id !== z.id).map((x, i) =>
+              el("option", { value: x.id }, (x.nom || "Zone " + (state.zones.indexOf(x) + 1)))))
+        : null,
       el("button", { class: "btn mini", onclick: () => { const c = deep(m); c.id = uid(); c.nom = m.nom + " (copie)"; (c.elements||[]).forEach(x => x.id = uid()); (c.quincailleries||[]).forEach(x => x.id = uid()); z.meubles.splice(z.meubles.findIndex(x => x.id === m.id) + 1, 0, c); renderZones(); } }, "Dupliquer"),
       el("button", { class: "btn mini", onclick: () => { z.meubles = z.meubles.filter(x => x.id !== m.id); renderZones(); } }, "Retirer"))));
 
