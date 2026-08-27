@@ -113,8 +113,9 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
   .ad{color:#C22B1E;font-weight:700}
   .p-note{color:#C22B1E;font-weight:700;font-style:normal}
   .p-notes-box{border:1.5px solid #C22B1E;border-radius:4px;background:#FDF3F2;padding:4px 8px}
-  .p-notes-box .p-sec-t{color:#C22B1E;border-bottom-color:#F3C9C4}
+  .p-notes-box .p-sec-t{color:#C22B1E;border-bottom-color:#F3C9C4;font-weight:400;font-size:8px;letter-spacing:.6px}
   .p-notes-box .p-mono{color:#A81F14;font-weight:700;font-size:10.5px}
+  .p-notes .p-mono{font-weight:700;color:#1A140D;font-size:10.5px}
   /* Bloc de données : invisible à l'œil et à l'impression papier (texte blanc, 1pt),
      mais toujours lu par « Importer une fiche PDF ». Aucune page ni titre supplémentaires. */
   .p-data{margin:0;padding:0;border:0}
@@ -205,7 +206,7 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7
 const deep = (o) => JSON.parse(JSON.stringify(o));
 
 const DEFAULT_REFS = {
-  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Habillage mural","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
+  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Habillage mural","Coussin / Tapisserie","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
   elementTypes: [AD,"Tablette","Bureau","Miroir","Piètement"],
   livraisons: [AD,"Monté","Partiellement monté","À plat (démonté)"],
   acces: ["Plain-pied","Escalier","Ascenseur","Monte-charge","Grue nécessaire","Autre"],
@@ -230,10 +231,12 @@ const DEFAULT_REFS = {
   pdtMat: [AD,"Dekton","Corian","Marbre","Granit","Quartz","Céramique","Inox","Bois massif","Stratifié","Autre"],
   pdtFournisseurs: [AD,"Granico","HMS","Autre"],
   pdtEssences: [AD,"Chêne","Hêtre","Frêne","Noyer"],
+  coussinMats: [AD,"Tissu","Papier peint"],
+  coussinFournisseurs: [AD,"Florence","Mimilo"],
   pdtEpBois: [AD,"20 mm","30 mm","40 mm"],
   pdtEps: [AD,"8 mm","12 mm","20 mm","30 mm"],
   electroFournisseurs: [AD,"Cojer","Client direct","Autre"],
-  poigneeTypes: [AD,"Bouton de porte","Prise de doigt","Push-pull","Fournie par le client","Sans poignée"],
+  poigneeTypes: [AD,"Bouton de porte","Prise de doigt","Push-pull","Fournie par le client"],
   poigneeFinitions: [AD,"Laiton","Noir mat","Inox","Chromé","Autre"],
   pushPullCouleurs: [AD,"Noir","Blanc","Gris"],
   priseTypes: [AD,"Pente à 30°","Profilé"],
@@ -260,19 +263,22 @@ const DEFAULT_CASCADES = {
 const MAT_SANS_FINITION = [AD,"—","Mélaminé","Stratifié","CP marine"];
 /* Matières façade avec cascade fournisseur -> réf (mêmes bases de panneaux) */
 const MAT_CASCADE = ["Mélaminé","Stratifié"];
-const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Habillage mural","Manteau de cheminée","Console cache-clim","Piètement"];
+const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Habillage mural","Coussin / Tapisserie","Manteau de cheminée","Console cache-clim","Piètement"];
 const PDT_OPTIONS = ["Rainurage","Cuve","Robinet","Prises","Plaque"];
 const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Lave-vaisselle","Micro-ondes","Évier","Cave à vin","Autre"];
 const estPdt = (m) => m.type === "Plan de travail";
 const estCuisine = (m) => m.type === "Cuisine";
 const MIROIR_SPECS = ["Filmé","Perçage","Arrondi","Biseauté","Cadre"];
 /* Sections masquées selon le type d'agencement (cf. arbre des choix) */
-const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Habillage mural","Plan de travail"];
-const SANS_LED = ["Miroir","Piètement","Manteau de cheminée","Banquette","Plan de travail"];
-const SANS_QUINC = ["Miroir","Piètement","Manteau de cheminée"];
+const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Habillage mural","Coussin / Tapisserie","Plan de travail"];
+const SANS_LED = ["Miroir","Piètement","Manteau de cheminée","Banquette","Plan de travail","Coussin / Tapisserie"];
+const SANS_QUINC = ["Miroir","Piètement","Manteau de cheminée","Coussin / Tapisserie"];
+const estCoussin = (m) => normKey(m.type) === normKey("Coussin / Tapisserie");
 const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette"];
 /* Accès unifié aux déclinaisons de matière : mêmes choix en Caisson et en Façade */
 const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect" };
+const K_PDT = { mat:"pdtMat", four:"pdtFournisseur", ref:"pdtRef", mdf:"pdtMdfFinitions", fin:"pdtFinition",
+  vernis:"pdtVernisType", huile:"pdtHuileTeinte", pFour:"pdtPeintureFournisseur", pRef:"pdtPeintureRef", pAsp:"pdtPeintureAspect" };
 const K_CAISSON = { mat:"caissonMat", four:"caissonFournisseur", ref:"caissonRef", mdf:"caissonMdfFinitions", fin:"caissonFinition", vernis:"caissonVernisType", huile:"caissonHuileTeinte", pFour:"caissonPeintureFournisseur", pRef:"caissonPeintureRef", pAsp:"caissonPeintureAspect" };
 
 const newQuinc = () => ({ id: uid(), cat: AD, detail: AD, finition: AD, ref: "" });
@@ -288,14 +294,17 @@ const newMeuble = () => ({
   mdfFinitions: [], finition: AD, vernisType: AD, huileTeinte: AD,
   peintureFournisseur: AD, peintureRef: AD, peintureAspect: AD,
   quincSpec: false, quincailleries: [], quincNote: "",
+  coussinMat: AD, coussinFournisseur: AD, coussinModele: "", coussinNote: "",
   pdtMat: AD, pdtFournisseur: AD, pdtRef: AD, pdtEssence: AD, pdtEp: AD,
+  pdtFinition: AD, pdtVernisType: AD, pdtHuileTeinte: AD,
+  pdtPeintureFournisseur: AD, pdtPeintureRef: AD, pdtPeintureAspect: AD, pdtMdfFinitions: [],
   pdtOptions: [], pdtRefs: {}, pdtNote: "",
   electro: false, electroFournisseur: AD, electroElements: [], electroRefs: {}, electroNote: "",
-  poigneeType: AD, poigneeRef: "", poigneeFinition: AD, poigneePrise: AD, profilRef: AD,
+  poignees: true, poigneeType: AD, poigneeRef: "", poigneeFinition: AD, poigneePrise: AD, profilRef: AD,
   bequillageRef: AD, nbPoignees: "", poigneeNote: "",
   tringle: false, tringleFinition: AD,
   led: false, ledCouleur: AD, ledEmpl: AD,
-  composition: "", notes: "",
+  composition: "", notes: "", attention: "",
 });
 const newElement = () => Object.assign(newMeuble(), { type: AD });
 const newZone = (nom) => ({ id: uid(), nom: nom || "", meubles: [newMeuble()], open: true });
@@ -646,6 +655,8 @@ function planTravailForm(m, rerender){
     /* Bois massif : essence et épaisseur remplacent fournisseur et référence */
     pc.push(field("Essence", makeSelect("pdtEssences", m.pdtEssence, v => { m.pdtEssence = v; }, "pdtEssences"), "160px"));
     pc.push(field("Épaisseur", makeSelect("pdtEpBois", m.pdtEp, v => { m.pdtEp = v; }, "pdtEpBois"), "150px"));
+    /* mêmes finitions que partout ailleurs : brut / peint (+ réf & aspect) / vernis / huilé (+ teinte) */
+    declMatiereForm(pc, m, K_PDT, rerender);
   } else {
     pc.push(field("Fournisseur", makeSelect("pdtFournisseurs", m.pdtFournisseur,
       v => { m.pdtFournisseur = v; m.pdtRef = AD; rerender(); }, "pdtFournisseurs"), "170px"));
@@ -716,6 +727,19 @@ function renderCorps(m, rerender){
     nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Électroménager"), el("div", { class: "grid" }, ec)));
   }
 
+  /* COUSSIN / TAPISSERIE — matière, modèle et fournisseur, sans finition ni quincaillerie */
+  if (estCoussin(m)){
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Coussin / Tapisserie"),
+      el("div", { class: "grid" },
+        field("Matière", makeSelect("coussinMats", m.coussinMat, v => { m.coussinMat = v; }, "coussinMats"), "170px"),
+        field("Fournisseur", makeSelect("coussinFournisseurs", m.coussinFournisseur,
+          v => { m.coussinFournisseur = v; }, "coussinFournisseurs"), "170px"),
+        field("Modèle", el("input", { class: "inp", value: m.coussinModele,
+          placeholder: "nom du modèle, coloris, référence...",
+          oninput: e => { m.coussinModele = e.target.value; } }), "240px"),
+        bulle(m, "coussinNote"))));
+  }
+
   /* PLAN DE TRAVAIL — type dédié, ou en complément d'une cuisine / salle de bain */
   if (estPdt(m)){
     nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Plan de travail"),
@@ -753,7 +777,7 @@ function renderCorps(m, rerender){
   }
 
   /* FAÇADE (ou « Matière & finition » pour les types simples) */
-  if (!estMiroir(m) && !estPdt(m)){
+  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m)){
     const fc = [];
     if (!estSimple(m)){
       fc.push(field("Type de façade", makeSelect("facadeTypes", m.facadeType, v => { m.facadeType = v; rerender(); }), "190px"));
@@ -819,7 +843,15 @@ function renderCorps(m, rerender){
 
   /* POIGNÉES + TRINGLE */
   if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
-    const pc = [ field("Type de poignée", makeSelect("poigneeTypes", m.poigneeType, v => { m.poigneeType = v; rerender(); }), "190px") ];
+    const pc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+      el("input", { type: "checkbox", checked: m.poignees !== false,
+        onchange: e => { m.poignees = e.target.checked; rerender(); } }),
+      el("span", {}, "Poignées")) ];
+    if (m.poignees === false){
+      pc.push(bulle(m, "poigneeNote"));
+      nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Poignées"), el("div", { class: "grid" }, pc)));
+    } else {
+    pc.push(field("Type de poignée", makeSelect("poigneeTypes", m.poigneeType, v => { m.poigneeType = v; rerender(); }), "190px"));
     if (m.poigneeType === "Bouton de porte"){
       pc.push(field("Réf. bouton", makeSelect("boutonRefs", m.poigneeRef || AD,
         v => { m.poigneeRef = (v === AD ? "" : v); }, "boutonRefs"), "180px"));
@@ -833,17 +865,18 @@ function renderCorps(m, rerender){
         pc.push(field("Réf. profilé", makeSelect("profilRefs", m.profilRef, v => { m.profilRef = v; }), "160px"));
       }
       pc.push(field("Finition", makeSelect("poigneeFinitions", m.poigneeFinition, v => { m.poigneeFinition = v; }), "160px"));
-    } else if (m.poigneeType === "Fournie par le client" || m.poigneeType === "Sans poignée" || m.poigneeType === AD || m.poigneeType === "—"){
+    } else if (m.poigneeType === "Fournie par le client" || m.poigneeType === AD || m.poigneeType === "—"){
       /* aucun choix supplémentaire */
     } else {
       pc.push(field("Réf. / détail", el("input", { class: "inp", value: m.poigneeRef, oninput: e => { m.poigneeRef = e.target.value; } })));
       pc.push(field("Finition", makeSelect("poigneeFinitions", m.poigneeFinition, v => { m.poigneeFinition = v; }), "160px"));
     }
-    if (m.poigneeType !== "Sans poignée" && m.poigneeType !== AD && m.poigneeType !== "—"){
+    if (m.poigneeType !== AD && m.poigneeType !== "—"){
       pc.push(field("Nombre", el("input", { class: "inp mono", value: m.nbPoignees, oninput: e => { m.nbPoignees = e.target.value; } }), "90px"));
     }
     pc.push(bulle(m, "poigneeNote"));
     nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Poignées"), el("div", { class: "grid" }, pc)));
+    }
 
     if (!SANS_TRINGLE.includes(m.type)){
       const tr = [ el("label", { class: "swch", style: "flex:0 0 auto" },
@@ -873,10 +906,15 @@ function renderCorps(m, rerender){
         placeholder: estMiroir(m) ? "Miroir salle d'eau L. 1070x H. 1700" : "1 colonne — 3 tiroirs, 4 étagères, 1 porte",
         oninput: e => { m.composition = e.target.value; } }))));
   nodes.push(el("div", { class: "grid", style: "margin-top:10px" },
-    field("Notes / points d'attention",
+    field("Notes (précisions de fabrication, imprimées sous la composition)",
       el("textarea", { class: "inp", rows: 2, value: m.notes,
-        placeholder: "Double fond électricité, air salin...",
+        placeholder: "Double fond électricité, chants plaqués, sens du fil...",
         oninput: e => { m.notes = e.target.value; } }))));
+  nodes.push(el("div", { class: "grid", style: "margin-top:10px" },
+    field("⚠ Points d'attention (imprimés en rouge)",
+      el("textarea", { class: "inp", rows: 2, value: m.attention,
+        placeholder: "Plan de travail hors lot, cotes à confirmer, prévoir renfort...",
+        oninput: e => { m.attention = e.target.value; } }))));
   return nodes;
 }
 
@@ -1012,11 +1050,19 @@ function corpsSections(m){
     } else ec.push(el("div", { class: "p-line" }, "Électroménager non fourni"));
     sec("Électroménager", ec);
   }
+  if (estCoussin(m)){
+    const cc = [ pline("Matière", fv(m.coussinMat)),
+      pline("Fournisseur", fv(m.coussinFournisseur)),
+      pline("Modèle", m.coussinModele ? el("span", { class: "p-val" }, m.coussinModele) : el("span", { class: "ad" }, AD)) ];
+    if (m.coussinNote) cc.push(el("div", { class: "p-line p-note" }, "💬 " + m.coussinNote));
+    sec("Coussin / Tapisserie", cc);
+  }
   if (estPdt(m)){
     const pc = [ pline("Matière", fv(m.pdtMat)) ];
     if (estPdtBois(m)) pc.push(pline("Essence", fv(m.pdtEssence)));
     else pc.push(pline("Fournisseur", fv(m.pdtFournisseur), nn(m.pdtFournisseur) ? [" ", fv(m.pdtRef)] : ""));
     pc.push(pline("Épaisseur", fv(m.pdtEp)));
+    if (estPdtBois(m)) declMatierePrint(pc, m, K_PDT);
     pc.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Usinages : "),
       m.pdtOptions.length ? listeAvecRefs(m.pdtOptions, m.pdtRefs) : el("span", { class: "ad" }, AD)));
     if (m.pdtNote) pc.push(el("div", { class: "p-line p-note" }, "💬 " + m.pdtNote));
@@ -1042,7 +1088,7 @@ function corpsSections(m){
     if (m.caissonNote) cl.push(el("div", { class: "p-line p-note" }, "💬 " + m.caissonNote));
     sec("Caisson", cl);
   }
-  if (!estMiroir(m) && !estPdt(m)){
+  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m)){
     const fl = [];
     if (!estSimple(m)){
       fl.push(pline("Type", fv(m.facadeType)));
@@ -1070,17 +1116,22 @@ function corpsSections(m){
   }
   if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
     const pl = [];
-    const po = el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Poignées : "), fv(m.poigneeType));
-    if (m.poigneeType === "Prise de doigt"){
-      po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(m.poigneePrise));
-      if (m.poigneePrise === "Profilé"){ po.appendChild(document.createTextNode(" ")); po.appendChild(fv(m.profilRef)); }
+    if (m.poignees === false){
+      pl.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Poignées : "),
+        el("span", { class: "p-val" }, "Sans poignée")));
+    } else {
+      const po = el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Poignées : "), fv(m.poigneeType));
+      if (m.poigneeType === "Prise de doigt"){
+        po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(m.poigneePrise));
+        if (m.poigneePrise === "Profilé"){ po.appendChild(document.createTextNode(" ")); po.appendChild(fv(m.profilRef)); }
+      }
+      if (nn(m.poigneeRef)) po.appendChild(el("span", { class: "p-val" }, " — " + m.poigneeRef));
+      if (m.poigneeType !== "Fournie par le client" && m.poigneeType !== AD && m.poigneeType !== "—"){
+        po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(m.poigneeFinition));
+      }
+      if (m.nbPoignees) po.appendChild(el("span", { class: "p-val" }, " ×" + m.nbPoignees));
+      pl.push(po);
     }
-    if (nn(m.poigneeRef)) po.appendChild(el("span", { class: "p-val" }, " — " + m.poigneeRef));
-    if (m.poigneeType !== "Fournie par le client" && m.poigneeType !== "Sans poignée" && m.poigneeType !== AD && m.poigneeType !== "—"){
-      po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(m.poigneeFinition));
-    }
-    if (m.nbPoignees) po.appendChild(el("span", { class: "p-val" }, " ×" + m.nbPoignees));
-    pl.push(po);
     if (m.tringle) pl.push(pline("Tringle", fv(m.tringleFinition)));
     if (m.poigneeNote) pl.push(el("div", { class: "p-line p-note" }, "💬 " + m.poigneeNote));
     sec("Poignées & tringle", pl);
@@ -1088,9 +1139,14 @@ function corpsSections(m){
   if (m.led && !SANS_LED.includes(m.type)) sec("Éclairage LED", [ el("div", { class: "p-line" }, fv(m.ledCouleur), " — ", fv(m.ledEmpl)) ]);
   if (m.composition) sec(estMiroir(m) ? "Composition / dimensions" : "Composition", [ el("div", { class: "p-mono" }, m.composition) ], true);
   if (m.notes){
-    secs.push(el("div", { class: "p-sec full p-notes-box" },
-      el("div", { class: "p-sec-t" }, "⚠ Notes / points d'attention"),
+    secs.push(el("div", { class: "p-sec full p-notes" },
+      el("div", { class: "p-sec-t" }, "Notes"),
       el("div", { class: "p-mono" }, m.notes)));
+  }
+  if (m.attention){
+    secs.push(el("div", { class: "p-sec full p-notes-box" },
+      el("div", { class: "p-sec-t" }, "⚠ Points d'attention"),
+      el("div", { class: "p-mono" }, m.attention)));
   }
   return secs;
 }
@@ -1206,6 +1262,8 @@ function alignRef(listKey, v){
 function reviveMeuble(m){
   return Object.assign(newMeuble(), m, {
     id: uid(),
+    poignees: (m.poigneeType === "Sans poignée") ? false : (m.poignees !== false),
+    poigneeType: (m.poigneeType === "Sans poignée") ? AD : m.poigneeType,
     type: alignRef("types", m.type),
     livraison: alignRef("livraisons", m.livraison),
     elements: (m.elements || []).map(x => reviveMeuble(Object.assign({}, x, { nom: x.nom || x.detail || "" }))),
@@ -1215,6 +1273,7 @@ function reviveMeuble(m){
     miroirSpecs: Array.isArray(m.miroirSpecs) ? m.miroirSpecs : [],
     pdtOptions: Array.isArray(m.pdtOptions) ? m.pdtOptions : [],
     pdtRefs: (m.pdtRefs && typeof m.pdtRefs === "object") ? Object.assign({}, m.pdtRefs) : {},
+    pdtMdfFinitions: Array.isArray(m.pdtMdfFinitions) ? m.pdtMdfFinitions : [],
     electroElements: Array.isArray(m.electroElements) ? m.electroElements : [],
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
   });
@@ -1349,7 +1408,7 @@ function ensureCascade(group, key, v, fallback){
 function sanitizeMeuble(m){
   const out = Object.assign(newMeuble(), {
     code: m.code || "", nom: m.nom || "",
-    composition: m.composition || "", notes: m.notes || "",
+    composition: m.composition || "", notes: m.notes || "", attention: m.attention || "",
     poigneeRef: m.poigneeRef || "", nbPoignees: String(m.nbPoignees == null ? "" : m.nbPoignees),
     caissonNote: m.caissonNote || "", facadeNote: m.facadeNote || "",
     quincNote: m.quincNote || "", poigneeNote: m.poigneeNote || "",
@@ -1361,8 +1420,18 @@ function sanitizeMeuble(m){
     electroElements: Array.isArray(m.electroElements) ? m.electroElements.filter(x => ELECTRO_ELEMENTS.includes(x)) : [],
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
     electro: !!m.electro, quincSpec: !!m.quincSpec,
+    coussinMat: ensureRef("coussinMats", m.coussinMat, AD),
+    coussinFournisseur: ensureRef("coussinFournisseurs", m.coussinFournisseur, AD),
+    coussinModele: m.coussinModele || "", coussinNote: m.coussinNote || "",
     pdtMat: ensureRef("pdtMat", m.pdtMat, AD),
     pdtEssence: ensureRef("pdtEssences", m.pdtEssence, AD),
+    pdtFinition: ensureRef("finitions", m.pdtFinition, AD),
+    pdtVernisType: ensureRef("vernisTypes", m.pdtVernisType, AD),
+    pdtHuileTeinte: ensureRef("huileTeintes", m.pdtHuileTeinte, AD),
+    pdtPeintureFournisseur: ensureRef("peintureFournisseurs", m.pdtPeintureFournisseur, AD),
+    pdtPeintureRef: ensureCascade("peintures", ensureRef("peintureFournisseurs", m.pdtPeintureFournisseur, AD), m.pdtPeintureRef, AD),
+    pdtPeintureAspect: ensureRef("peintureAspects", m.pdtPeintureAspect, AD),
+    pdtMdfFinitions: Array.isArray(m.pdtMdfFinitions) ? m.pdtMdfFinitions.filter(x => ["Brut","Apprêté","Peint"].includes(x)) : [],
     pdtEp: ensureRef(normKey(m.pdtMat) === normKey("Bois massif") ? "pdtEpBois" : "pdtEps", m.pdtEp, AD),
     pdtFournisseur: ensureRef("pdtFournisseurs", m.pdtFournisseur, AD),
     pdtRef: ensureCascade("planTravail", ensureRef("pdtFournisseurs", m.pdtFournisseur, AD), m.pdtRef, AD),
@@ -1414,7 +1483,9 @@ function sanitizeMeuble(m){
     e2.type = ensureRef("elementTypes", x.type, AD);
     return e2;
   });
-  out.poigneeType = ensureRef("poigneeTypes", m.poigneeType, AD);
+  /* ancien choix « Sans poignée » → case décochée */
+  if (m.poigneeType === "Sans poignée"){ out.poignees = false; out.poigneeType = AD; }
+  else { out.poignees = m.poignees !== false; out.poigneeType = ensureRef("poigneeTypes", m.poigneeType, AD); }
   if (out.poigneeType === "Bouton de porte" && m.poigneeRef && m.poigneeRef !== AD && m.poigneeRef !== "—")
     ensureRef("boutonRefs", m.poigneeRef, "");
   out.poigneePrise = ensureRef("priseTypes", m.poigneePrise, AD);
@@ -1445,7 +1516,7 @@ function heuristicParse(text){
     [/banquette/i,"Banquette"],[/bureau/i,"Bureau"],[/salle de bain|meuble (sous[- ])?vasques?|sous[- ]vasque|meuble wc/i,"Salle de bain"],
     [/soubassement/i,"Soubassement"],[/habillage mural|habillage de mur|panneau mural/i,"Habillage mural"],[/pi[èe]tement/i,"Piètement"],[/tablette/i,"Tablette"],
     [/miroir/i,"Miroir"],[/plan de travail|plan de tra/i,"Plan de travail"],
-    [/escalier|marche(s)? d'escalier|limon/i,"Escalier"],
+    [/escalier|marche(s)? d'escalier|limon/i,"Escalier"],[/coussin|assise garnie/i,"Coussin / Tapisserie"],
   ];
   const typeOf = (s) => { for (const [re, t] of TYPE_MAP) if (re.test(s)) return t; return AD; };
   const pushMeuble = () => { if (meuble && zone) zone.meubles.push(sanitizeMeuble(meuble)); meuble = null; };
@@ -1453,7 +1524,7 @@ function heuristicParse(text){
   const zNom = (n) => (etage ? etage + " — " : "") + n;
   const freshMeuble = (code, nom, type) => Object.assign({}, newMeuble(), {
     code: code || "", nom: nomDepuis(nom || ""), type: type || AD,
-    quincailleries: [], elements: [], mdfFinitions: [], miroirSpecs: [], composition: "", notes: "" });
+    quincailleries: [], elements: [], mdfFinitions: [], miroirSpecs: [], composition: "", notes: "", attention: "" });
   const stripPrix = (s) => s.replace(/\s+[-–]?\s*\d{1,3}(?:[\s\u00A0]\d{3})*,\d{2}\s*€?\s*$/, "").trim();
   const dimsOf = (s) => {
     const d = stripPrix(s).match(/L\.\s*±?\s*[\d\/][\dxX±,.\/\s]*(?:P\.\s*±?\s*[\d\/]+\s*x?\s*)?(?:H\.\s*±?\s*[\d\/]+)?(?:\s*x?\s*[ée]p\.?\s*\d+\s*mm)?/);
@@ -1499,7 +1570,8 @@ function heuristicParse(text){
     meuble.peintureAspect = a.startsWith("mat") ? "Mat" : a.startsWith("satin") ? "Satiné"
       : a.startsWith("brillant") ? "Brillant" : "Velours";
   };
-  const addNote = (t) => { if (meuble && t && !(meuble.notes || "").includes(t)) meuble.notes = (meuble.notes ? meuble.notes + "\n" : "") + t; };
+  /* Les repérages du parseur sont des alertes (hors lot, à confirmer…) → points d'attention */
+  const addNote = (t) => { if (meuble && t && !(meuble.attention || "").includes(t)) meuble.attention = (meuble.attention ? meuble.attention + "\n" : "") + t; };
   const addCompo = (t) => { if (meuble && t) meuble.composition += (meuble.composition ? "\n" : "") + t; };
   const markPeint = () => {
     if (!meuble) return;
@@ -1694,6 +1766,7 @@ function heuristicParse(text){
     else if (/ouverture par bouton|\bbouton\b/.test(low) && meuble.poigneeType === AD) meuble.poigneeType = "Bouton de porte";
     if (/prise de main|prise de doigt/.test(low)) meuble.poigneeType = "Prise de doigt";
     if (/poign[ée]es? fournies? par le client/.test(low)) meuble.poigneeType = "Fournie par le client";
+    if (/sans poign[ée]e|aucune poign[ée]e|pas de poign[ée]e/.test(low)) meuble.poignees = false;
     if (/poign[ée]e sur mesure/.test(low)) meuble.poigneeNote = (meuble.poigneeNote ? meuble.poigneeNote + " · " : "") + "Poignée sur mesure";
     const nb = l.match(/(\d+)\s*(unit[ée]s?|poign[ée]es?)/i);
     if (nb) meuble.nbPoignees = nb[1];
@@ -1737,6 +1810,24 @@ function heuristicParse(text){
       if (/sous [ée]tag/.test(low)) meuble.ledEmpl = ensureRef("ledEmpl", "Sous étagères", AD);
       else if (/joue/.test(low)) meuble.ledEmpl = "Joues à la verticale";
     }
+    /* Coussin / Tapisserie : matière, fournisseur et modèle */
+    if (estCoussin(meuble)){
+      if (/papier peint/.test(low)) meuble.coussinMat = ensureRef("coussinMats", "Papier peint", AD);
+      else if (/tissus?|garniture|ouate/.test(low)) meuble.coussinMat = ensureRef("coussinMats", "Tissu", AD);
+      const fc = l.match(/\b(Florence|Mimilo)\b/i);
+      if (fc) meuble.coussinFournisseur = ensureRef("coussinFournisseurs",
+        fc[1][0].toUpperCase() + fc[1].slice(1).toLowerCase(), AD);
+      /* « Modèle : … » l'emporte toujours ; sinon « Tissus X » sert de repli, sans le nom du fournisseur */
+      const modExp = l.match(/(?:mod[èe]le|r[ée]f[ée]rence)\s*:\s*(.{2,60})$/i);
+      if (modExp) meuble.coussinModele = modExp[1].replace(/[.,;]+$/, "").trim();
+      else if (!meuble.coussinModele){
+        const modImp = l.match(/tissus?\s+(.{2,60})$/i);
+        if (modImp){
+          const reste = modImp[1].replace(/\b(Florence|Mimilo)\b/ig, "").replace(/[.,;]+$/, "").trim();
+          if (reste.length > 1) meuble.coussinModele = reste;
+        }
+      }
+    }
     /* Plan de travail : matière, fournisseur et usinages */
     if (/plan de travail|plan de tra|cr[ée]dence|plateau (en|de) (pierre|dekton|corian|marbre|granit)/.test(low)){
       const pdtCible = (meuble.type === "Plan de travail") ? meuble : null;
@@ -1766,6 +1857,12 @@ function heuristicParse(text){
         const val = ep[1] + " mm";
         const liste = estPdtBois(meuble) ? "pdtEpBois" : "pdtEps";
         meuble.pdtEp = ensureRef(liste, val, AD);
+      }
+      /* la finition détectée par les règles générales s'applique au plan de travail */
+      if (meuble.finition !== AD && meuble.pdtFinition === AD){
+        meuble.pdtFinition = meuble.finition;
+        if (meuble.huileTeinte !== AD) meuble.pdtHuileTeinte = meuble.huileTeinte;
+        if (meuble.vernisType !== AD) meuble.pdtVernisType = meuble.vernisType;
       }
       const opt = (cond, nom) => { if (cond && !meuble.pdtOptions.includes(nom)) meuble.pdtOptions.push(nom); };
       opt(/rainurage|rainur[ée]|[ée]gouttoir/.test(low), "Rainurage");
@@ -1860,11 +1957,30 @@ async function importFichePDF(f){
 }
 
 /* ================= BRANCHEMENTS ================= */
-document.getElementById("btnPrint").addEventListener("click", () => {
-  try { buildSheet(); window.print(); }
-  catch(e){ setStatus("err", "Erreur lors de la préparation de l'impression : " + (e.message || e)); }
+/* Le navigateur propose le titre de la page comme nom de fichier PDF :
+   on le remplace le temps de l'impression, puis on le remet. */
+const TITRE_APP = document.title;
+function titreImpression(){
+  const c = state.chantier;
+  const base = (c.nom || c.adresse || "sans nom").trim();
+  /* caractères interdits dans un nom de fichier */
+  return ("Fiche - " + base).replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+}
+function imprimerFiche(){
+  try {
+    buildSheet();
+    document.title = titreImpression();
+    window.print();
+  } catch(e){
+    setStatus("err", "Erreur lors de la préparation de l'impression : " + (e.message || e));
+  }
+}
+document.getElementById("btnPrint").addEventListener("click", imprimerFiche);
+/* impression lancée depuis le menu du navigateur (Ctrl+P) */
+window.addEventListener("beforeprint", () => {
+  try { buildSheet(); document.title = titreImpression(); } catch(e){}
 });
-window.addEventListener("beforeprint", () => { try { buildSheet(); } catch(e){} });
+window.addEventListener("afterprint", () => { document.title = TITRE_APP; });
 document.getElementById("btnExportJson").addEventListener("click", exportJSON);
 document.getElementById("btnImportJson").addEventListener("click", () => document.getElementById("fileJson").click());
 document.getElementById("fileJson").addEventListener("change", e => { if (e.target.files[0]) importJSONFile(e.target.files[0]); e.target.value = ""; });
