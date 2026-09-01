@@ -221,7 +221,7 @@ const DEFAULT_REFS = {
   caissonMat: [AD,"Mélaminé","Aggloméré plaqué","MDF","Chêne massif","Multiplex / CP","Autre"],
   facadeTypes: [AD,"Simple","Cadre","Cadre + remplissage","Rainurée","Cintrée","Vitrée","Autre"],
   facadeMat: [AD,"MDF","Pin massif","Chêne massif","Mélaminé","Plaqué bois","Stratifié","CP marine","Autre"],
-  remplissageTypes: [AD,"Tissu","Tapisserie","Cannage","Miroir","Autre"],
+  remplissageTypes: [AD,"Tissu","Papier peint","Tapisserie","Cannage","Miroir","Autre"],
   miroirTeintes: [AD,"Clair","Vieilli"],
   miroirPoses: [AD,"Percé","Filmé","Avec cadre"],
   miroirEps: [AD,"4 mm","6 mm","8 mm"],
@@ -283,9 +283,12 @@ const SANS_LED = ["Miroir","Piètement","Manteau de cheminée","Banquette","Plan
 const SANS_QUINC = ["Miroir","Piètement","Manteau de cheminée","Coussin / Tapisserie"];
 const estCoussin = (m) => normKey(m.type) === normKey("Coussin / Tapisserie");
 const estGardeCorps = (m) => normKey(m.type) === normKey("Garde-corps");
+const estTeteDeLit = (m) => normKey(m.type) === normKey("Tête de lit");
 const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette"];
 /* Accès unifié aux déclinaisons de matière : mêmes choix en Caisson et en Façade */
 const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect" };
+const K_CADRE = { mat:"cadreMat", four:"cadreFournisseur", ref:"cadreRef", mdf:"cadreMdfFinitions", fin:"cadreFinition",
+  vernis:"cadreVernisType", huile:"cadreHuileTeinte", pFour:"cadrePeintureFournisseur", pRef:"cadrePeintureRef", pAsp:"cadrePeintureAspect" };
 const K_PDT = { mat:"pdtMat", four:"pdtFournisseur", ref:"pdtRef", mdf:"pdtMdfFinitions", fin:"pdtFinition",
   vernis:"pdtVernisType", huile:"pdtHuileTeinte", pFour:"pdtPeintureFournisseur", pRef:"pdtPeintureRef", pAsp:"pdtPeintureAspect" };
 const K_CAISSON = { mat:"caissonMat", four:"caissonFournisseur", ref:"caissonRef", mdf:"caissonMdfFinitions", fin:"caissonFinition", vernis:"caissonVernisType", huile:"caissonHuileTeinte", pFour:"caissonPeintureFournisseur", pRef:"caissonPeintureRef", pAsp:"caissonPeintureAspect" };
@@ -305,6 +308,10 @@ const newMeuble = () => ({
   quincSpec: false, quincailleries: [], quincNote: "",
   coussinMat: AD, coussinFournisseur: AD, coussinModele: "", coussinNote: "",
   verre: false, verreType: AD, verreNote: "",
+  remplissage: false,
+  cadre: false, cadreMat: AD, cadreFournisseur: AD, cadreRef: AD, cadreMdfFinitions: [],
+  cadreFinition: AD, cadreVernisType: AD, cadreHuileTeinte: AD,
+  cadrePeintureFournisseur: AD, cadrePeintureRef: AD, cadrePeintureAspect: AD, cadreNote: "",
   pdtMat: AD, pdtFournisseur: AD, pdtRef: AD, pdtEssence: AD, pdtEp: AD,
   pdtFinition: AD, pdtVernisType: AD, pdtHuileTeinte: AD,
   pdtPeintureFournisseur: AD, pdtPeintureRef: AD, pdtPeintureAspect: AD, pdtMdfFinitions: [],
@@ -314,9 +321,10 @@ const newMeuble = () => ({
   bequillageRef: AD, nbPoignees: "", poigneeNote: "",
   tringle: false, tringleFinition: AD,
   led: false, ledCouleur: AD, ledEmpl: AD,
-  composition: "", notes: "", attention: "",
+  composition: "", notes: "", attention: "", simple: null,
 });
-const newElement = () => Object.assign(newMeuble(), { type: AD });
+/* mode : null = suit les règles du type ; true = simple ; false = détaillé */
+const newElement = (mode) => Object.assign(newMeuble(), { type: AD, simple: (mode === undefined ? null : mode) });
 const newZone = (nom) => ({ id: uid(), nom: nom || "", meubles: [newMeuble()], open: true });
 
 /* ================= ÉTAT ================= */
@@ -554,7 +562,8 @@ function makeSelect(listKeyOrGet, value, onPick, usageKey){
 /* ================= RENDU ================= */
 const zonesBox = document.getElementById("zonesBox");
 /* Un type est « simple » s'il est livré comme tel, ou s'il a été créé en mode simple par l'utilisateur */
-const estSimple = (m) => memeChoix(TYPES_SIMPLES, m.type) !== undefined
+const estSimple = (m) => (m.simple === true) ? true : (m.simple === false) ? false
+  : memeChoix(TYPES_SIMPLES, m.type) !== undefined
   || memeChoix(state.typesSimples || [], m.type) !== undefined;
 const estMiroir = (m) => m.type === "Miroir";
 const matAFinir = (mat) => !MAT_SANS_FINITION.includes(mat);
@@ -816,6 +825,42 @@ function renderCorps(m, rerender){
       el("div", { class: "grid" }, fc)));
   }
 
+  /* TÊTE DE LIT — remplissage (tissu, papier peint…) et cadre, tous deux optionnels */
+  if (estTeteDeLit(m)){
+    const rc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+      el("input", { type: "checkbox", checked: m.remplissage,
+        onchange: e => { m.remplissage = e.target.checked; rerender(); } }),
+      el("span", {}, "Remplissage")) ];
+    if (m.remplissage){
+      rc.push(field("Type de remplissage", makeSelect("remplissageTypes", m.remplissageType,
+        v => { m.remplissageType = v; rerender(); }), "180px"));
+      const t = m.remplissageType;
+      if (t === "Tissu" || t === "Tapisserie" || t === "Papier peint"){
+        rc.push(field("Fournisseur", makeSelect("tissuFournisseurs", m.tissuFournisseur,
+          v => { m.tissuFournisseur = v; m.tissuRef = AD; rerender(); }, "tissuFournisseurs"), "170px"));
+        if (m.tissuFournisseur !== AD && m.tissuFournisseur !== "—"){
+          rc.push(field("Réf. " + m.tissuFournisseur, makeSelect(() => cascadeListe("tissus", m.tissuFournisseur),
+            m.tissuRef, v => { m.tissuRef = v; }, "tissus." + m.tissuFournisseur), "190px"));
+        }
+      } else if (t === "Miroir"){
+        rc.push(field("Miroir", makeSelect("miroirTeintes", m.miroirTeinte, v => { m.miroirTeinte = v; }), "150px"));
+        rc.push(field("Pose du miroir", makeSelect("miroirPoses", m.miroirPose, v => { m.miroirPose = v; }), "150px"));
+      }
+    }
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Remplissage"), el("div", { class: "grid" }, rc)));
+
+    const cc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+      el("input", { type: "checkbox", checked: m.cadre,
+        onchange: e => { m.cadre = e.target.checked; rerender(); } }),
+      el("span", {}, "Cadre")) ];
+    if (m.cadre){
+      cc.push(field("Matériau du cadre", makeSelect("facadeMat", m.cadreMat, v => { m.cadreMat = v; rerender(); }), "170px"));
+      declMatiereForm(cc, m, K_CADRE, rerender);   /* fournisseur, réf. et finitions selon le matériau */
+      cc.push(bulle(m, "cadreNote"));
+    }
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Cadre"), el("div", { class: "grid" }, cc)));
+  }
+
   /* VERRE — garde-corps : remplissage vitré optionnel */
   if (estGardeCorps(m)){
     const vc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
@@ -1009,7 +1054,10 @@ function renderMeuble(z, m){
   if (!estMiroir(m)) card.appendChild(el("div", { class: "bloc" },
     el("div", { class: "bloc-t" }, "Éléments intégrés à l'agencement"),
     elemCards,
-    el("button", { class: "btn mini", onclick: () => { m.elements.push(newElement()); rerender(); } }, "+ Ajouter une ligne (tablette, plan de travail, bureau, miroir, piètement)")));
+    el("button", { class: "btn mini", onclick: () => { m.elements.push(newElement(true)); rerender(); } },
+      "+ Élément simple (tablette, plan de travail, miroir…)"),
+    el("button", { class: "btn mini", style: "margin-left:6px", onclick: () => { m.elements.push(newElement(false)); rerender(); } },
+      "+ Élément détaillé (caisson, façade, poignées…)")));
 
   renderCorps(m, rerender).forEach(n => card.appendChild(n));
   return card;
@@ -1129,6 +1177,20 @@ function corpsSections(m){
     if (m.facadeNote) fl.push(el("div", { class: "p-line p-note" }, "💬 " + m.facadeNote));
     sec(estSimple(m) ? "Matière & finition" : "Façade / matière & finition", fl);
 
+    if (estTeteDeLit(m) && m.remplissage){
+      const rl = [ pline("Type", fv(m.remplissageType)) ];
+      const t = m.remplissageType;
+      if (t === "Tissu" || t === "Tapisserie" || t === "Papier peint")
+        rl.push(pline("Fournisseur", fv(m.tissuFournisseur), nn(m.tissuFournisseur) ? [" ", fv(m.tissuRef)] : ""));
+      else if (t === "Miroir") rl.push(pline("Miroir", fv(m.miroirTeinte), " · ", fv(m.miroirPose)));
+      sec("Remplissage", rl);
+    }
+    if (estTeteDeLit(m) && m.cadre){
+      const cl = [ pline("Matériau", fv(m.cadreMat)) ];
+      declMatierePrint(cl, m, K_CADRE);
+      if (m.cadreNote) cl.push(el("div", { class: "p-line p-note" }, "💬 " + m.cadreNote));
+      sec("Cadre", cl);
+    }
     if (estGardeCorps(m) && m.verre){
       const vl = [ pline("Modèle", fv(m.verreType)) ];
       if (m.verreNote) vl.push(el("div", { class: "p-line p-note" }, "💬 " + m.verreNote));
@@ -1305,6 +1367,8 @@ function reviveMeuble(m){
     pdtOptions: Array.isArray(m.pdtOptions) ? m.pdtOptions : [],
     pdtRefs: (m.pdtRefs && typeof m.pdtRefs === "object") ? Object.assign({}, m.pdtRefs) : {},
     pdtMdfFinitions: Array.isArray(m.pdtMdfFinitions) ? m.pdtMdfFinitions : [],
+    cadreMdfFinitions: Array.isArray(m.cadreMdfFinitions) ? m.cadreMdfFinitions : [],
+    simple: (m.simple === true || m.simple === false) ? m.simple : null,
     electroElements: Array.isArray(m.electroElements) ? m.electroElements : [],
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
   }));
@@ -1461,6 +1525,22 @@ function sanitizeMeuble(m){
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
     electro: !!m.electro, quincSpec: !!m.quincSpec,
     verre: !!m.verre, verreType: ensureRef("verreTypes", m.verreType, AD), verreNote: m.verreNote || "",
+    remplissage: !!m.remplissage,
+    cadre: !!m.cadre,
+    cadreMat: ensureRef("facadeMat", m.cadreMat, AD),
+    cadreFournisseur: ensureRef("fournisseurs", m.cadreFournisseur, AD),
+    cadreRef: MAT_CASCADE.includes(ensureRef("facadeMat", m.cadreMat, AD))
+      ? ensureCascade("panneaux", ensureRef("fournisseurs", m.cadreFournisseur, AD), m.cadreRef, AD)
+      : ensureRef("matRefs", m.cadreRef, AD),
+    cadreMdfFinitions: Array.isArray(m.cadreMdfFinitions) ? m.cadreMdfFinitions.filter(x => ["Brut","Apprêté","Peint"].includes(x)) : [],
+    cadreFinition: ensureRef("finitions", m.cadreFinition, AD),
+    cadreVernisType: ensureRef("vernisTypes", m.cadreVernisType, AD),
+    cadreHuileTeinte: ensureRef("huileTeintes", m.cadreHuileTeinte, AD),
+    cadrePeintureFournisseur: ensureRef("peintureFournisseurs", m.cadrePeintureFournisseur, AD),
+    cadrePeintureRef: ensureCascade("peintures", ensureRef("peintureFournisseurs", m.cadrePeintureFournisseur, AD), m.cadrePeintureRef, AD),
+    cadrePeintureAspect: ensureRef("peintureAspects", m.cadrePeintureAspect, AD),
+    cadreNote: m.cadreNote || "",
+    simple: (m.simple === true || m.simple === false) ? m.simple : null,
     coussinMat: ensureRef("coussinMats", m.coussinMat, AD),
     coussinFournisseur: ensureRef("coussinFournisseurs", m.coussinFournisseur, AD),
     coussinModele: m.coussinModele || "", coussinNote: m.coussinNote || "",
