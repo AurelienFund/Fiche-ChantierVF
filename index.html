@@ -247,7 +247,7 @@ const DEFAULT_REFS = {
   poigneeTypes: [AD,"Bouton de porte","Prise de doigt","Push-pull","Fournie par le client"],
   poigneeFinitions: [AD,"Laiton","Noir mat","Inox","Chromé","Autre"],
   pushPullCouleurs: [AD,"Noir","Blanc","Gris"],
-  priseTypes: [AD,"Pente à 30°","Profilé"],
+  priseTypes: [AD,"Pente à 25°","Profilé"],
   profilRefs: [AD],
   boutonRefs: [AD,"Viefe","LMC","Corston"],
   bequillages: [AD],
@@ -271,6 +271,10 @@ const DEFAULT_CASCADES = {
 const MAT_SANS_FINITION = [AD,"—","Mélaminé","Stratifié","CP marine"];
 /* Matières façade avec cascade fournisseur -> réf (mêmes bases de panneaux) */
 const MAT_CASCADE = ["Mélaminé","Stratifié"];
+/* Choix renommés depuis une version antérieure : l'ancienne valeur est remplacée partout
+   (base personnelle, fiche en cours, fiches réimportées) pour éviter les doublons. */
+const RENOMMAGES = { "Pente à 30°": "Pente à 25°" };
+const renomme = (v) => (typeof v === "string" && RENOMMAGES[v]) ? RENOMMAGES[v] : v;
 const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Garde-corps","Habillage mural","Coussin / Tapisserie","Manteau de cheminée","Console cache-clim","Piètement"];
 const PDT_OPTIONS = ["Rainurage","Cuve","Robinet","Prises","Plaque"];
 const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Lave-vaisselle","Micro-ondes","Évier","Cave à vin","Autre"];
@@ -352,7 +356,7 @@ function loadRefs(){
     const seen = saved.seen || {};
     if (saved.refs) for (const k in state.refs){
       if (!Array.isArray(saved.refs[k]) || !saved.refs[k].length) continue;
-      const liste = dedupeListe(saved.refs[k], DEFAULT_REFS[k]);
+      const liste = dedupeListe(saved.refs[k].map(renomme), DEFAULT_REFS[k]);
       /* Sans marqueur « seen » (base enregistrée par une version antérieure), on réintègre tous les
          choix par défaut manquants : c'est le rattrapage unique qui fait apparaître les nouveautés. */
       const connus = Array.isArray(seen[k]) ? seen[k] : [];
@@ -364,7 +368,7 @@ function loadRefs(){
     if (saved.cascades) for (const g in state.cascades){
       if (saved.cascades[g]) for (const f in saved.cascades[g]){
         if (Array.isArray(saved.cascades[g][f]) && saved.cascades[g][f].length)
-          state.cascades[g][f] = dedupeListe(saved.cascades[g][f], (DEFAULT_CASCADES[g] || {})[f]);
+          state.cascades[g][f] = dedupeListe(saved.cascades[g][f].map(renomme), (DEFAULT_CASCADES[g] || {})[f]);
       }
     }
     if (saved.usage) state.usage = saved.usage;
@@ -1355,6 +1359,7 @@ function alignRef(listKey, v, fallback){
 function reviveMeuble(m){
   return complete(Object.assign(newMeuble(), m, {
     id: uid(),
+    poigneePrise: renomme(m.poigneePrise),
     poignees: (m.poigneeType === "Sans poignée") ? false : (m.poignees !== false),
     poigneeType: (m.poigneeType === "Sans poignée" || m.poigneeType === undefined) ? AD : m.poigneeType,
     type: alignRef("types", m.type, AD),
@@ -1609,7 +1614,7 @@ function sanitizeMeuble(m){
   else { out.poignees = m.poignees !== false; out.poigneeType = ensureRef("poigneeTypes", m.poigneeType, AD); }
   if (out.poigneeType === "Bouton de porte" && m.poigneeRef && m.poigneeRef !== AD && m.poigneeRef !== "—")
     ensureRef("boutonRefs", m.poigneeRef, "");
-  out.poigneePrise = ensureRef("priseTypes", m.poigneePrise, AD);
+  out.poigneePrise = ensureRef("priseTypes", renomme(m.poigneePrise), AD);
   out.profilRef = ensureRef("profilRefs", m.profilRef, AD);
   out.bequillageRef = ensureRef("bequillages", m.bequillageRef, AD);
   out.poigneeFinition = out.poigneeType === "Push-pull"
