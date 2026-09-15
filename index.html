@@ -213,14 +213,14 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7
 const deep = (o) => JSON.parse(JSON.stringify(o));
 
 const DEFAULT_REFS = {
-  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Garde-corps","Habillage mural","Coussin / Tapisserie","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
+  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
   elementTypes: [AD,"Tablette","Bureau","Miroir","Piètement"],
   livraisons: [AD,"Monté","Partiellement monté","À plat (démonté)"],
   acces: ["Plain-pied","Escalier","Ascenseur","Monte-charge","Grue nécessaire","Autre"],
   caissonConstr: [AD,"Standard IKEA","Standard à recouper","Sur mesure"],
-  caissonMat: [AD,"Mélaminé","Aggloméré plaqué","MDF","Chêne massif","Multiplex / CP","Autre"],
+  caissonMat: [AD,"Mélaminé","Aggloméré plaqué","MDF","Plaqué chêne","Chêne massif","Multiplex / CP","Autre"],
   facadeTypes: [AD,"Simple","Cadre","Cadre + remplissage","Rainurée","Cintrée","Vitrée","Autre"],
-  facadeMat: [AD,"MDF","Pin massif","Chêne massif","Mélaminé","Plaqué bois","Stratifié","CP marine","Autre"],
+  facadeMat: [AD,"MDF","Pin massif","Plaqué chêne","Chêne massif","Mélaminé","Plaqué bois","Stratifié","CP marine","Autre"],
   remplissageTypes: [AD,"Tissu","Papier peint","Tapisserie","Cannage","Miroir","Autre"],
   miroirTeintes: [AD,"Clair","Vieilli"],
   miroirPoses: [AD,"Percé","Filmé","Avec cadre"],
@@ -240,6 +240,9 @@ const DEFAULT_REFS = {
   pdtEssences: [AD,"Chêne","Hêtre","Frêne","Noyer"],
   coussinMats: [AD,"Tissu","Papier peint"],
   verreTypes: [AD,"Feuilleté","Trempé","Armé"],
+  verreVerriere: [AD,"4 mm","6 mm","33²","Miroir"],
+  porteTypes: [AD,"Basique","Phonique","Coupe-feu","Âme pleine"],
+  ferrages: [AD,"Anuba","Paumelle invisible","Charnière invisible"],
   coussinFournisseurs: [AD,"Florence","Mimilo"],
   pdtEpBois: [AD,"20 mm","30 mm","40 mm"],
   pdtEps: [AD,"8 mm","12 mm","20 mm","30 mm"],
@@ -275,19 +278,23 @@ const MAT_CASCADE = ["Mélaminé","Stratifié"];
    (base personnelle, fiche en cours, fiches réimportées) pour éviter les doublons. */
 const RENOMMAGES = { "Pente à 30°": "Pente à 25°" };
 const renomme = (v) => (typeof v === "string" && RENOMMAGES[v]) ? RENOMMAGES[v] : v;
-const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Garde-corps","Habillage mural","Coussin / Tapisserie","Manteau de cheminée","Console cache-clim","Piètement"];
+const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Manteau de cheminée","Console cache-clim","Piètement"];
 const PDT_OPTIONS = ["Rainurage","Cuve","Robinet","Prises","Plaque"];
 const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Lave-vaisselle","Micro-ondes","Évier","Cave à vin","Autre"];
 const estPdt = (m) => m.type === "Plan de travail";
 const estCuisine = (m) => m.type === "Cuisine";
 const MIROIR_SPECS = ["Filmé","Perçage","Arrondi","Biseauté","Cadre"];
 /* Sections masquées selon le type d'agencement (cf. arbre des choix) */
-const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Garde-corps","Habillage mural","Coussin / Tapisserie","Plan de travail"];
+const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Garde-corps","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Plan de travail"];
 const SANS_LED = ["Miroir","Piètement","Manteau de cheminée","Banquette","Plan de travail","Coussin / Tapisserie"];
 const SANS_QUINC = ["Miroir","Piètement","Manteau de cheminée","Coussin / Tapisserie"];
 const estCoussin = (m) => normKey(m.type) === normKey("Coussin / Tapisserie");
 const estGardeCorps = (m) => normKey(m.type) === normKey("Garde-corps");
 const estTeteDeLit = (m) => normKey(m.type) === normKey("Tête de lit");
+const estPorte = (m) => normKey(m.type) === normKey("Porte");
+const estVerriere = (m) => normKey(m.type) === normKey("Verrière");
+/* le verre existe sur le garde-corps (modèle) et sur la verrière (épaisseur / miroir) */
+const listeVerre = (m) => estVerriere(m) ? "verreVerriere" : "verreTypes";
 const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette"];
 /* Accès unifié aux déclinaisons de matière : mêmes choix en Caisson et en Façade */
 const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect" };
@@ -313,6 +320,7 @@ const newMeuble = () => ({
   coussinMat: AD, coussinFournisseur: AD, coussinModele: "", coussinNote: "",
   verre: false, verreType: AD, verreNote: "",
   remplissage: false,
+  porteType: AD, ferrage: AD,
   cadre: false, cadreMat: AD, cadreFournisseur: AD, cadreRef: AD, cadreMdfFinitions: [],
   cadreFinition: AD, cadreVernisType: AD, cadreHuileTeinte: AD,
   cadrePeintureFournisseur: AD, cadrePeintureRef: AD, cadrePeintureAspect: AD, cadreNote: "",
@@ -829,6 +837,14 @@ function renderCorps(m, rerender){
       el("div", { class: "grid" }, fc)));
   }
 
+  /* PORTE — type de porte puis ferrage ; la matière & finition suit dans son bloc */
+  if (estPorte(m)){
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Porte"),
+      el("div", { class: "grid" },
+        field("Type de porte", makeSelect("porteTypes", m.porteType, v => { m.porteType = v; rerender(); }, "porteTypes"), "180px"),
+        field("Ferrage", makeSelect("ferrages", m.ferrage, v => { m.ferrage = v; }, "ferrages"), "200px"))));
+  }
+
   /* TÊTE DE LIT — remplissage (tissu, papier peint…) et cadre, tous deux optionnels */
   if (estTeteDeLit(m)){
     const rc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
@@ -865,15 +881,15 @@ function renderCorps(m, rerender){
     nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Cadre"), el("div", { class: "grid" }, cc)));
   }
 
-  /* VERRE — garde-corps : remplissage vitré optionnel */
-  if (estGardeCorps(m)){
+  /* VERRE — garde-corps (modèle) et verrière (épaisseur / miroir) */
+  if (estGardeCorps(m) || estVerriere(m)){
     const vc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
       el("input", { type: "checkbox", checked: m.verre,
         onchange: e => { m.verre = e.target.checked; rerender(); } }),
       el("span", {}, "Verre")) ];
     if (m.verre){
-      vc.push(field("Modèle de verre", makeSelect("verreTypes", m.verreType,
-        v => { m.verreType = v; }, "verreTypes"), "180px"));
+      vc.push(field(estVerriere(m) ? "Verre" : "Modèle de verre",
+        makeSelect(listeVerre(m), m.verreType, v => { m.verreType = v; }, listeVerre(m)), "180px"));
       vc.push(bulle(m, "verreNote"));
     }
     nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Verre"), el("div", { class: "grid" }, vc)));
@@ -1181,6 +1197,9 @@ function corpsSections(m){
     if (m.facadeNote) fl.push(el("div", { class: "p-line p-note" }, "💬 " + m.facadeNote));
     sec(estSimple(m) ? "Matière & finition" : "Façade / matière & finition", fl);
 
+    if (estPorte(m)){
+      sec("Porte", [ pline("Type", fv(m.porteType)), pline("Ferrage", fv(m.ferrage)) ]);
+    }
     if (estTeteDeLit(m) && m.remplissage){
       const rl = [ pline("Type", fv(m.remplissageType)) ];
       const t = m.remplissageType;
@@ -1195,8 +1214,8 @@ function corpsSections(m){
       if (m.cadreNote) cl.push(el("div", { class: "p-line p-note" }, "💬 " + m.cadreNote));
       sec("Cadre", cl);
     }
-    if (estGardeCorps(m) && m.verre){
-      const vl = [ pline("Modèle", fv(m.verreType)) ];
+    if ((estGardeCorps(m) || estVerriere(m)) && m.verre){
+      const vl = [ pline(estVerriere(m) ? "Verre" : "Modèle", fv(m.verreType)) ];
       if (m.verreNote) vl.push(el("div", { class: "p-line p-note" }, "💬 " + m.verreNote));
       sec("Verre", vl);
     }
@@ -1529,7 +1548,11 @@ function sanitizeMeuble(m){
     electroElements: Array.isArray(m.electroElements) ? m.electroElements.filter(x => ELECTRO_ELEMENTS.includes(x)) : [],
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
     electro: !!m.electro, quincSpec: !!m.quincSpec,
-    verre: !!m.verre, verreType: ensureRef("verreTypes", m.verreType, AD), verreNote: m.verreNote || "",
+    verre: !!m.verre,
+    verreType: ensureRef(normKey(m.type) === normKey("Verrière") ? "verreVerriere" : "verreTypes", m.verreType, AD),
+    verreNote: m.verreNote || "",
+    porteType: ensureRef("porteTypes", m.porteType, AD),
+    ferrage: ensureRef("ferrages", m.ferrage, AD),
     remplissage: !!m.remplissage,
     cadre: !!m.cadre,
     cadreMat: ensureRef("facadeMat", m.cadreMat, AD),
@@ -1642,7 +1665,9 @@ function heuristicParse(text){
     [/banquette/i,"Banquette"],[/bureau/i,"Bureau"],[/salle de bain|meuble (sous[- ])?vasques?|sous[- ]vasque|meuble wc/i,"Salle de bain"],
     [/soubassement/i,"Soubassement"],[/habillage mural|habillage de mur|panneau mural/i,"Habillage mural"],[/pi[èe]tement/i,"Piètement"],[/tablette/i,"Tablette"],
     [/miroir/i,"Miroir"],[/plan de travail|plan de tra/i,"Plan de travail"],
-    [/escalier|marche(s)? d'escalier|limon/i,"Escalier"],[/garde[- ]?corps|rambarde|main courante/i,"Garde-corps"],[/coussin|assise garnie/i,"Coussin / Tapisserie"],
+    [/escalier|marche(s)? d'escalier|limon/i,"Escalier"],
+    [/verri[èe]re/i,"Verrière"],[/\bportes? (int[ée]rieure?|de service|coupe[- ]feu|phonique|[àa] galandage)|\bbloc[- ]porte/i,"Porte"],
+    [/fa[çc]ades? seules?|remplacement de fa[çc]ades?/i,"Façade"],[/habillage(?! mural)/i,"Habillage"],[/garde[- ]?corps|rambarde|main courante/i,"Garde-corps"],[/coussin|assise garnie/i,"Coussin / Tapisserie"],
   ];
   const typeOf = (s) => { for (const [re, t] of TYPE_MAP) if (re.test(s)) return t; return AD; };
   const pushMeuble = () => { if (meuble && zone) zone.meubles.push(sanitizeMeuble(meuble)); meuble = null; };
@@ -1840,7 +1865,9 @@ function heuristicParse(text){
       if (!meuble.mdfFinitions.includes("Brut")) meuble.mdfFinitions.push("Brut");
     } else if (/\bmdf\b/.test(low) && !/tablette|[ée]tag[èe]re|soubassement/.test(low) && meuble.facadeMat === AD) meuble.facadeMat = "MDF";
     if (/plaqu[ée]e? (ch[êe]ne|bois|noyer)/.test(low)){
-      if (/fa[çc]ade|porte|visible|habillage/.test(low) || meuble.facadeMat === AD) meuble.facadeMat = "Plaqué bois";
+      const plaqueChene = /plaqu[ée]e? ch[êe]ne/.test(low);
+      if (/fa[çc]ade|porte|visible|habillage/.test(low) || meuble.facadeMat === AD)
+        meuble.facadeMat = plaqueChene ? "Plaqué chêne" : "Plaqué bois";
       const es = l.match(/plaqu[ée]e?\s+(\S+)/i);
       if (es){ const ess = es[1].replace(/[,.;:]+$/, ""); if (!(meuble.facadeNote || "").includes(ess)) meuble.facadeNote = ((meuble.facadeNote ? meuble.facadeNote + " · " : "") + "plaqué " + ess); }
     }
@@ -1936,12 +1963,27 @@ function heuristicParse(text){
       if (/sous [ée]tag/.test(low)) meuble.ledEmpl = ensureRef("ledEmpl", "Sous étagères", AD);
       else if (/joue/.test(low)) meuble.ledEmpl = "Joues à la verticale";
     }
-    /* Garde-corps : remplissage verre et son modèle */
-    if (estGardeCorps(meuble) && /verre|vitrage|vitr[ée]/.test(low)){
+    /* Garde-corps et verrière : remplissage verre */
+    if ((estGardeCorps(meuble) || estVerriere(meuble)) && /verre|vitrage|vitr[ée]/.test(low)){
       meuble.verre = true;
-      if (/feuillet/.test(low)) meuble.verreType = ensureRef("verreTypes", "Feuilleté", AD);
-      else if (/tremp/.test(low)) meuble.verreType = ensureRef("verreTypes", "Trempé", AD);
-      else if (/arm[ée]/.test(low)) meuble.verreType = ensureRef("verreTypes", "Armé", AD);
+      if (estVerriere(meuble)){
+        const ep = l.match(/\b(33\s*[²2]|[46])\s*(mm)?\b/i);
+        if (/miroir/.test(low)) meuble.verreType = ensureRef("verreVerriere", "Miroir", AD);
+        else if (ep) meuble.verreType = ensureRef("verreVerriere", /33/.test(ep[1]) ? "33²" : ep[1] + " mm", AD);
+      } else {
+        if (/feuillet/.test(low)) meuble.verreType = ensureRef("verreTypes", "Feuilleté", AD);
+        else if (/tremp/.test(low)) meuble.verreType = ensureRef("verreTypes", "Trempé", AD);
+        else if (/arm[ée]/.test(low)) meuble.verreType = ensureRef("verreTypes", "Armé", AD);
+      }
+    }
+    /* Porte : type et ferrage */
+    if (estPorte(meuble)){
+      if (/coupe[- ]feu|\bcf\b/.test(low)) meuble.porteType = ensureRef("porteTypes", "Coupe-feu", AD);
+      else if (/phonique|acoustique/.test(low)) meuble.porteType = ensureRef("porteTypes", "Phonique", AD);
+      else if (/[âa]me pleine/.test(low)) meuble.porteType = ensureRef("porteTypes", "Âme pleine", AD);
+      if (/anuba/.test(low)) meuble.ferrage = ensureRef("ferrages", "Anuba", AD);
+      else if (/paumelle/.test(low)) meuble.ferrage = ensureRef("ferrages", "Paumelle invisible", AD);
+      else if (/charni[èe]re invisible|tectus/.test(low)) meuble.ferrage = ensureRef("ferrages", "Charnière invisible", AD);
     }
     /* Coussin / Tapisserie : matière, fournisseur et modèle */
     if (estCoussin(meuble)){
