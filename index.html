@@ -213,7 +213,7 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7
 const deep = (o) => JSON.parse(JSON.stringify(o));
 
 const DEFAULT_REFS = {
-  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
+  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Îlot","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
   elementTypes: [AD,"Tablette","Bureau","Miroir","Piètement"],
   livraisons: [AD,"Monté","Partiellement monté","À plat (démonté)"],
   acces: ["Plain-pied","Escalier","Ascenseur","Monte-charge","Grue nécessaire","Autre"],
@@ -237,6 +237,7 @@ const DEFAULT_REFS = {
   quincFinitions: [AD,"Nickelé","Noir","Inox","Laiton"],
   pdtMat: [AD,"Dekton","Corian","Marbre","Granit","Quartz","Céramique","Inox","Bois massif","Stratifié","Autre"],
   pdtFournisseurs: [AD,"Granico","HMS","Autre"],
+  pdtModeles: [AD],
   pdtEssences: [AD,"Chêne","Hêtre","Frêne","Noyer"],
   coussinMats: [AD,"Tissu","Papier peint"],
   verreTypes: [AD,"Feuilleté","Trempé","Armé"],
@@ -280,9 +281,9 @@ const RENOMMAGES = { "Pente à 30°": "Pente à 25°" };
 const renomme = (v) => (typeof v === "string" && RENOMMAGES[v]) ? RENOMMAGES[v] : v;
 const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Manteau de cheminée","Console cache-clim","Piètement"];
 const PDT_OPTIONS = ["Rainurage","Cuve","Robinet","Prises","Plaque"];
-const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Lave-vaisselle","Micro-ondes","Évier","Cave à vin","Autre"];
+const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Congélateur","Lave-vaisselle","Micro-ondes","Cafetière","Évier","Cave à vin","Autre"];
 const estPdt = (m) => m.type === "Plan de travail";
-const estCuisine = (m) => m.type === "Cuisine";
+const estCuisine = (m) => normKey(m.type) === normKey("Cuisine") || normKey(m.type) === normKey("Îlot");
 const MIROIR_SPECS = ["Filmé","Perçage","Arrondi","Biseauté","Cadre"];
 /* Sections masquées selon le type d'agencement (cf. arbre des choix) */
 const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Garde-corps","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Plan de travail"];
@@ -689,12 +690,10 @@ function planTravailForm(m, rerender){
     /* mêmes finitions que partout ailleurs : brut / peint (+ réf & aspect) / vernis / huilé (+ teinte) */
     declMatiereForm(pc, m, K_PDT, rerender);
   } else {
+    /* le modèle se renseigne avant le fournisseur */
+    pc.push(field("Modèle", makeSelect("pdtModeles", m.pdtRef, v => { m.pdtRef = v; }, "pdtModeles"), "200px"));
     pc.push(field("Fournisseur", makeSelect("pdtFournisseurs", m.pdtFournisseur,
-      v => { m.pdtFournisseur = v; m.pdtRef = AD; rerender(); }, "pdtFournisseurs"), "170px"));
-    if (m.pdtFournisseur !== AD && m.pdtFournisseur !== "—"){
-      pc.push(field("Réf. " + m.pdtFournisseur, makeSelect(() => cascadeListe("planTravail", m.pdtFournisseur),
-        m.pdtRef, v => { m.pdtRef = v; }, "planTravail." + m.pdtFournisseur), "190px"));
-    }
+      v => { m.pdtFournisseur = v; }, "pdtFournisseurs"), "170px"));
     pc.push(field("Épaisseur", makeSelect("pdtEps", m.pdtEp, v => { m.pdtEp = v; }, "pdtEps"), "150px"));
   }
   pc.push(el("div", { class: "fld", style: "min-width:100%" },
@@ -741,22 +740,6 @@ function declMatiereForm(arr, m, K, rerender){
 }
 function renderCorps(m, rerender){
   const nodes = [];
-
-  /* ÉLECTROMÉNAGER — première ligne pour une cuisine */
-  if (estCuisine(m)){
-    const ec = [ el("label", { class: "swch", style: "flex:0 0 auto" },
-      el("input", { type: "checkbox", checked: m.electro, onchange: e => { m.electro = e.target.checked; rerender(); } }),
-      el("span", {}, "Électroménagers")) ];
-    if (m.electro){
-      ec.push(field("Fournisseur", makeSelect("electroFournisseurs", m.electroFournisseur,
-        v => { m.electroFournisseur = v; }, "electroFournisseurs"), "180px"));
-      ec.push(el("div", { class: "fld", style: "min-width:100%" },
-        checkboxRowRefs("Éléments fournis :", ELECTRO_ELEMENTS, m, "electroElements", "electroRefs", rerender,
-          "marque, modèle, réf...")));
-      ec.push(bulle(m, "electroNote"));
-    }
-    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Électroménager"), el("div", { class: "grid" }, ec)));
-  }
 
   /* COUSSIN / TAPISSERIE — matière, modèle et fournisseur, sans finition ni quincaillerie */
   if (estCoussin(m)){
@@ -895,39 +878,20 @@ function renderCorps(m, rerender){
     nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Verre"), el("div", { class: "grid" }, vc)));
   }
 
-  /* QUINCAILLERIE SPÉCIALE : hors standard atelier (Blum & co ne sont pas listés) */
-  if (!estMiroir(m) && !estPdt(m) && !SANS_QUINC.includes(m.type)){
-    const qc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
-      el("input", { type: "checkbox", checked: m.quincSpec,
-        onchange: e => {
-          m.quincSpec = e.target.checked;
-          if (m.quincSpec && !m.quincailleries.length) m.quincailleries.push(newQuinc());
-          rerender();
-        } }),
-      el("span", {}, "Quincaillerie spéciale")) ];
-    const bloc = el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Quincaillerie spéciale"),
-      el("div", { class: "grid" }, qc));
-    if (m.quincSpec){
-      m.quincailleries.forEach(q => {
-        bloc.appendChild(el("div", { class: "ligne-item" },
-          field("Type", makeSelect("quincSpecTypes", q.cat,
-            v => { q.cat = v; q.detail = AD; q.finition = AD; rerender(); }, "quincSpecTypes"), "200px"),
-          (q.cat !== AD && q.cat !== "—")
-            ? field("Réf. / modèle", makeSelect(() => cascadeListe("quincSpecDetails", q.cat),
-                q.detail, v => { q.detail = v; }, "quincSpecDetails." + q.cat), "190px") : null,
-          (q.cat !== AD && q.cat !== "—")
-            ? field("Réf. complémentaire", el("input", { class: "inp", value: q.ref || "",
-                placeholder: "réf. exacte, dimension, coloris...",
-                oninput: e => { q.ref = e.target.value; } })) : null,
-          (q.cat !== AD && q.cat !== "—")
-            ? field("Finition", makeSelect("quincFinitions", q.finition, v => { q.finition = v; }), "140px") : null,
-          el("button", { class: "btn mini", onclick: () => { m.quincailleries = m.quincailleries.filter(x => x.id !== q.id); rerender(); } }, "×")));
-      });
-      bloc.appendChild(el("div", { class: "grid" },
-        el("button", { class: "btn mini", style: "flex:0 0 auto", onclick: () => { m.quincailleries.push(newQuinc()); rerender(); } }, "+ Ajouter une quincaillerie spéciale"),
-        bulle(m, "quincNote")));
+  /* ÉLECTROMÉNAGER — sous le caisson et la façade, pour garder la même base d'affichage */
+  if (estCuisine(m)){
+    const ec = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+      el("input", { type: "checkbox", checked: m.electro, onchange: e => { m.electro = e.target.checked; rerender(); } }),
+      el("span", {}, "Électroménagers")) ];
+    if (m.electro){
+      ec.push(field("Fournisseur", makeSelect("electroFournisseurs", m.electroFournisseur,
+        v => { m.electroFournisseur = v; }, "electroFournisseurs"), "180px"));
+      ec.push(el("div", { class: "fld", style: "min-width:100%" },
+        checkboxRowRefs("Éléments fournis :", ELECTRO_ELEMENTS, m, "electroElements", "electroRefs", rerender,
+          "marque, modèle, réf...")));
+      ec.push(bulle(m, "electroNote"));
     }
-    nodes.push(bloc);
+    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Électroménager"), el("div", { class: "grid" }, ec)));
   }
 
   /* POIGNÉES + TRINGLE */
@@ -974,6 +938,41 @@ function renderCorps(m, rerender){
       if (m.tringle) tr.push(field("Finition tringle", makeSelect("tringleFinitions", m.tringleFinition, v => { m.tringleFinition = v; }), "160px"));
       nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Tringle"), el("div", { class: "grid" }, tr)));
     }
+  }
+
+  /* QUINCAILLERIE SPÉCIALE : hors standard atelier (Blum & co ne sont pas listés) */
+  if (!estMiroir(m) && !estPdt(m) && !SANS_QUINC.includes(m.type)){
+    const qc = [ el("label", { class: "swch", style: "flex:0 0 auto" },
+      el("input", { type: "checkbox", checked: m.quincSpec,
+        onchange: e => {
+          m.quincSpec = e.target.checked;
+          if (m.quincSpec && !m.quincailleries.length) m.quincailleries.push(newQuinc());
+          rerender();
+        } }),
+      el("span", {}, "Quincaillerie spéciale")) ];
+    const bloc = el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Quincaillerie spéciale"),
+      el("div", { class: "grid" }, qc));
+    if (m.quincSpec){
+      m.quincailleries.forEach(q => {
+        bloc.appendChild(el("div", { class: "ligne-item" },
+          field("Type", makeSelect("quincSpecTypes", q.cat,
+            v => { q.cat = v; q.detail = AD; q.finition = AD; rerender(); }, "quincSpecTypes"), "200px"),
+          (q.cat !== AD && q.cat !== "—")
+            ? field("Réf. / modèle", makeSelect(() => cascadeListe("quincSpecDetails", q.cat),
+                q.detail, v => { q.detail = v; }, "quincSpecDetails." + q.cat), "190px") : null,
+          (q.cat !== AD && q.cat !== "—")
+            ? field("Réf. complémentaire", el("input", { class: "inp", value: q.ref || "",
+                placeholder: "réf. exacte, dimension, coloris...",
+                oninput: e => { q.ref = e.target.value; } })) : null,
+          (q.cat !== AD && q.cat !== "—")
+            ? field("Finition", makeSelect("quincFinitions", q.finition, v => { q.finition = v; }), "140px") : null,
+          el("button", { class: "btn mini", onclick: () => { m.quincailleries = m.quincailleries.filter(x => x.id !== q.id); rerender(); } }, "×")));
+      });
+      bloc.appendChild(el("div", { class: "grid" },
+        el("button", { class: "btn mini", style: "flex:0 0 auto", onclick: () => { m.quincailleries.push(newQuinc()); rerender(); } }, "+ Ajouter une quincaillerie spéciale"),
+        bulle(m, "quincNote")));
+    }
+    nodes.push(bloc);
   }
 
   /* LED */
@@ -1132,27 +1131,13 @@ function corpsSections(m){
   const secs = [];
   const sec = (title, lines, full) => { if (lines.length) secs.push(el("div", { class: "p-sec" + (full ? " full" : "") }, el("div", { class: "p-sec-t" }, title), lines)); };
 
-  if (estCuisine(m)){
-    const ec = [];
-    if (m.electro){
-      ec.push(pline("Fourni par", fv(m.electroFournisseur)));
-      ec.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Éléments : "),
-        m.electroElements.length ? listeAvecRefs(m.electroElements, m.electroRefs) : el("span", { class: "ad" }, AD)));
-      if (m.electroNote) ec.push(el("div", { class: "p-line p-note" }, "💬 " + m.electroNote));
-    } else ec.push(el("div", { class: "p-line" }, "Électroménager non fourni"));
-    sec("Électroménager", ec);
-  }
-  if (estCoussin(m)){
-    const cc = [ pline("Matière", fv(m.coussinMat)),
-      pline("Fournisseur", fv(m.coussinFournisseur)),
-      pline("Modèle", m.coussinModele ? el("span", { class: "p-val" }, m.coussinModele) : el("span", { class: "ad" }, AD)) ];
-    if (m.coussinNote) cc.push(el("div", { class: "p-line p-note" }, "💬 " + m.coussinNote));
-    sec("Coussin / Tapisserie", cc);
-  }
   if (estPdt(m)){
     const pc = [ pline("Matière", fv(m.pdtMat)) ];
     if (estPdtBois(m)) pc.push(pline("Essence", fv(m.pdtEssence)));
-    else pc.push(pline("Fournisseur", fv(m.pdtFournisseur), nn(m.pdtFournisseur) ? [" ", fv(m.pdtRef)] : ""));
+    else {
+      pc.push(pline("Modèle", fv(m.pdtRef)));
+      pc.push(pline("Fournisseur", fv(m.pdtFournisseur)));
+    }
     pc.push(pline("Épaisseur", fv(m.pdtEp)));
     if (estPdtBois(m)) declMatierePrint(pc, m, K_PDT);
     pc.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Usinages : "),
@@ -1219,14 +1204,23 @@ function corpsSections(m){
       if (m.verreNote) vl.push(el("div", { class: "p-line p-note" }, "💬 " + m.verreNote));
       sec("Verre", vl);
     }
-    if (!SANS_QUINC.includes(m.type) && m.quincSpec){
-      const qReal = m.quincailleries.filter(q => q.cat !== "—");
-      const ql = qReal.map(q =>
-        el("div", { class: "p-line" }, "• ", fv(q.cat),
-          nn(q.cat) ? [" — ", fv(q.detail), (q.ref ? el("span", { class: "p-val" }, " (" + q.ref + ")") : ""), " · ", fv(q.finition)] : ""));
-      if (m.quincNote) ql.push(el("div", { class: "p-line p-note" }, "💬 " + m.quincNote));
-      sec("Quincaillerie spéciale", ql);
-    }
+  }
+  if (estCuisine(m)){
+    const ec = [];
+    if (m.electro){
+      ec.push(pline("Fourni par", fv(m.electroFournisseur)));
+      ec.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Éléments : "),
+        m.electroElements.length ? listeAvecRefs(m.electroElements, m.electroRefs) : el("span", { class: "ad" }, AD)));
+      if (m.electroNote) ec.push(el("div", { class: "p-line p-note" }, "💬 " + m.electroNote));
+    } else ec.push(el("div", { class: "p-line" }, "Électroménager non fourni"));
+    sec("Électroménager", ec);
+  }
+  if (estCoussin(m)){
+    const cc = [ pline("Matière", fv(m.coussinMat)),
+      pline("Fournisseur", fv(m.coussinFournisseur)),
+      pline("Modèle", m.coussinModele ? el("span", { class: "p-val" }, m.coussinModele) : el("span", { class: "ad" }, AD)) ];
+    if (m.coussinNote) cc.push(el("div", { class: "p-line p-note" }, "💬 " + m.coussinNote));
+    sec("Coussin / Tapisserie", cc);
   }
   if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
     const pl = [];
@@ -1250,6 +1244,17 @@ function corpsSections(m){
     if (m.tringle) pl.push(pline("Tringle", fv(m.tringleFinition)));
     if (m.poigneeNote && m.poignees !== false) pl.push(el("div", { class: "p-line p-note" }, "💬 " + m.poigneeNote));
     sec("Poignées & tringle", pl);
+  }
+  /* quincaillerie spéciale : sous les poignées, pour ne pas décaler les blocs habituels */
+  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m)){
+    if (!SANS_QUINC.includes(m.type) && m.quincSpec){
+      const qReal = m.quincailleries.filter(q => q.cat !== "—");
+      const ql = qReal.map(q =>
+        el("div", { class: "p-line" }, "• ", fv(q.cat),
+          nn(q.cat) ? [" — ", fv(q.detail), (q.ref ? el("span", { class: "p-val" }, " (" + q.ref + ")") : ""), " · ", fv(q.finition)] : ""));
+      if (m.quincNote) ql.push(el("div", { class: "p-line p-note" }, "💬 " + m.quincNote));
+      sec("Quincaillerie spéciale", ql);
+    }
   }
   if (m.led && !SANS_LED.includes(m.type)) sec("Éclairage LED", [ el("div", { class: "p-line" }, fv(m.ledCouleur), " — ", fv(m.ledEmpl)) ]);
   if (m.composition) sec(estMiroir(m) ? "Composition / dimensions" : "Composition", [ el("div", { class: "p-mono" }, m.composition) ], true);
@@ -1583,7 +1588,7 @@ function sanitizeMeuble(m){
     pdtMdfFinitions: Array.isArray(m.pdtMdfFinitions) ? m.pdtMdfFinitions.filter(x => ["Brut","Apprêté","Peint"].includes(x)) : [],
     pdtEp: ensureRef(normKey(m.pdtMat) === normKey("Bois massif") ? "pdtEpBois" : "pdtEps", m.pdtEp, AD),
     pdtFournisseur: ensureRef("pdtFournisseurs", m.pdtFournisseur, AD),
-    pdtRef: ensureCascade("planTravail", ensureRef("pdtFournisseurs", m.pdtFournisseur, AD), m.pdtRef, AD),
+    pdtRef: ensureRef("pdtModeles", m.pdtRef, AD),
     electroFournisseur: ensureRef("electroFournisseurs", m.electroFournisseur, AD),
     pdtNote: m.pdtNote || "", electroNote: m.electroNote || "",
     miroirSpecs: Array.isArray(m.miroirSpecs) ? m.miroirSpecs.filter(x => MIROIR_SPECS.includes(x)) : [],
@@ -2013,6 +2018,12 @@ function heuristicParse(text){
       }
       const fourPdt = l.match(/\b(Granico|HMS)\b/i);
       if (pdtCible && fourPdt) pdtCible.pdtFournisseur = ensureRef("pdtFournisseurs", fourPdt[1].toUpperCase() === "HMS" ? "HMS" : "Granico", AD);
+      /* modèle nommé après la matière : « Dekton Kelya », « Corian Glacier White » */
+      if (pdtCible && matPdt){
+        const apres = l.slice(l.indexOf(matPdt[1]) + matPdt[1].length).match(/^\s+([A-ZÀ-Ü][\wÀ-ÿ-]*(?:\s+[A-ZÀ-Ü][\wÀ-ÿ-]*)?)/);
+        if (apres && !/^(fourni|pos[ée]|hors|non)/i.test(apres[1]))
+          pdtCible.pdtRef = ensureRef("pdtModeles", apres[1].trim(), AD);
+      }
       /* Bois massif : essence à la place du fournisseur */
       if (pdtCible){
         const ess = l.match(/\b(ch[êe]ne|h[êe]tre|fr[êe]ne|noyer)\b/i);
