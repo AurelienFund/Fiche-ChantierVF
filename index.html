@@ -189,6 +189,7 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
 <script>
 /* ================= CONSTANTES ================= */
 const APP_VERSION = "v9";
+const APP_DATE = "28/08/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
 /* Stockage : localStorage quand il est accessible (page hébergée, fichier local),
    sinon repli en mémoire pour que l'outil reste utilisable en aperçu sandboxé.
    Dans ce cas, les données vivent le temps de la session : à exporter en JSON ou PDF. */
@@ -583,7 +584,8 @@ const matAFinir = (mat) => !MAT_SANS_FINITION.includes(mat);
 
 function subTitle(){
   document.getElementById("subTitle").textContent =
-    "AGENCEMENT · MENUISERIE — " + (state.chantier.nom || state.chantier.adresse || "nouveau chantier") + " · " + APP_VERSION;
+    "AGENCEMENT · MENUISERIE — " + (state.chantier.nom || state.chantier.adresse || "nouveau chantier") +
+    " · " + APP_VERSION + " du " + APP_DATE;
 }
 function renderChantier(){
   const c = state.chantier;
@@ -1290,7 +1292,8 @@ function buildSheet(){
     el("div", { class: "p-meta", style: "text-align:right" },
       metaLine("Date", c.date),
       el("div", {}, el("span", { class: "p-lab" }, "Zones : " + state.zones.length +
-        " · Agencements : " + state.zones.reduce((s, z) => s + z.meubles.length, 0))),
+        " · Agencements : " + state.zones.reduce((s, z) => s + z.meubles.length, 0) +
+        " · " + APP_VERSION + " du " + APP_DATE)),
       el("div", { class: "p-acces" + (isAD(c.acces) ? " ad" : "") },
         "ACCÈS : " + (c.acces || "—") + (c.accesPrecision ? " — " + c.accesPrecision : "")))));
   if (state.generalites) sheet.appendChild(el("div", { class: "p-gen" }, el("strong", {}, "GÉNÉRALITÉS — "), state.generalites));
