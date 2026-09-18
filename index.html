@@ -189,7 +189,7 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
 <script>
 /* ================= CONSTANTES ================= */
 const APP_VERSION = "v9";
-const APP_DATE = "28/08/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
+const APP_DATE = "29/08/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
 /* Stockage : localStorage quand il est accessible (page hébergée, fichier local),
    sinon repli en mémoire pour que l'outil reste utilisable en aperçu sandboxé.
    Dans ce cas, les données vivent le temps de la session : à exporter en JSON ou PDF. */
@@ -350,11 +350,12 @@ let state = {
   cascades: deep(DEFAULT_CASCADES),
   usage: {},
   typesSimples: [],   /* types ajoutés par l'utilisateur en mode « simple » */
+  retires: {},        /* choix livrés avec l'outil et retirés volontairement */
 };
 function saveRefs(){
   try { STORE.setItem("ficheChantierBase",
     JSON.stringify({ refs: state.refs, cascades: state.cascades, usage: state.usage,
-      typesSimples: state.typesSimples, seen: DEFAULT_REFS })); } catch(e){}
+      typesSimples: state.typesSimples, retires: state.retires })); } catch(e){}
 }
 function loadRefs(){
   try {
@@ -363,17 +364,17 @@ function loadRefs(){
     /* « seen » = choix par défaut connus lors de la dernière sauvegarde. Tout choix par défaut
        AJOUTÉ depuis (nouvelle version de l'outil) est réintégré ; ceux que l'utilisateur a
        volontairement retirés ne reviennent pas. */
-    const seen = saved.seen || {};
+    /* Chaque liste est RECONSTRUITE : choix livrés avec l'outil, moins ceux que vous avez
+       explicitement retirés, plus vos ajouts personnels. Les nouveautés d'une mise à jour
+       apparaissent donc toujours, à leur place d'origine, quel que soit l'état de la base. */
+    state.retires = (saved.retires && typeof saved.retires === "object") ? saved.retires : {};
     if (saved.refs) for (const k in state.refs){
-      if (!Array.isArray(saved.refs[k]) || !saved.refs[k].length) continue;
-      const liste = dedupeListe(saved.refs[k].map(renomme), DEFAULT_REFS[k]);
-      /* Sans marqueur « seen » (base enregistrée par une version antérieure), on réintègre tous les
-         choix par défaut manquants : c'est le rattrapage unique qui fait apparaître les nouveautés. */
-      const connus = Array.isArray(seen[k]) ? seen[k] : [];
-      (DEFAULT_REFS[k] || []).forEach(v => {
-        if (!memeChoix(connus, v) && !memeChoix(liste, v)) liste.push(v);
-      });
-      state.refs[k] = dedupeListe(liste, DEFAULT_REFS[k]);
+      if (!Array.isArray(saved.refs[k])) continue;
+      const perso = saved.refs[k].map(renomme);
+      const retires = Array.isArray(state.retires[k]) ? state.retires[k] : [];
+      const base = (DEFAULT_REFS[k] || []).filter(v => !memeChoix(retires, v));
+      const ajouts = perso.filter(v => !memeChoix(DEFAULT_REFS[k] || [], v));
+      state.refs[k] = dedupeListe(base.concat(ajouts), DEFAULT_REFS[k]);
     }
     if (saved.cascades) for (const g in state.cascades){
       if (saved.cascades[g]) for (const f in saved.cascades[g]){
@@ -470,6 +471,7 @@ function sortedList(list, usageKey){
   const head = list.filter(v => v === AD || v === "—");
   const rest = list.filter(v => v !== AD && v !== "—");
   const idx = new Map(rest.map((v, i) => [v, i]));
+  /* les choix jamais utilisés gardent leur ordre d'origine ; seuls ceux réellement employés remontent */
   rest.sort((a, b) => ((u[b] || 0) - (u[a] || 0)) || (idx.get(a) - idx.get(b)));
   return head.concat(rest);
 }
@@ -559,6 +561,11 @@ function makeSelect(listKeyOrGet, value, onPick, usageKey){
       if (!isNaN(idx) && idx >= 0 && idx < list.length){
         const removed = list.splice(idx, 1)[0];
         if (estListeTypes) state.typesSimples = (state.typesSimples || []).filter(t => normKey(t) !== normKey(removed));
+        /* un choix livré avec l'outil et retiré volontairement ne doit pas revenir à la mise à jour */
+        if (typeof listKeyOrGet === "string" && memeChoix(DEFAULT_REFS[listKeyOrGet] || [], removed)){
+          if (!state.retires[listKeyOrGet]) state.retires[listKeyOrGet] = [];
+          state.retires[listKeyOrGet].push(removed);
+        }
         saveRefs();
         if (value === removed) value = list[0];
       }
