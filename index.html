@@ -189,7 +189,7 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
 <script>
 /* ================= CONSTANTES ================= */
 const APP_VERSION = "v9";
-const APP_DATE = "29/08/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
+const APP_DATE = "30/08/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
 /* Stockage : localStorage quand il est accessible (page hébergée, fichier local),
    sinon repli en mémoire pour que l'outil reste utilisable en aperçu sandboxé.
    Dans ce cas, les données vivent le temps de la session : à exporter en JSON ou PDF. */
@@ -368,23 +368,40 @@ function loadRefs(){
        explicitement retirés, plus vos ajouts personnels. Les nouveautés d'une mise à jour
        apparaissent donc toujours, à leur place d'origine, quel que soit l'état de la base. */
     state.retires = (saved.retires && typeof saved.retires === "object") ? saved.retires : {};
-    if (saved.refs) for (const k in state.refs){
-      if (!Array.isArray(saved.refs[k])) continue;
-      const perso = saved.refs[k].map(renomme);
-      const retires = Array.isArray(state.retires[k]) ? state.retires[k] : [];
-      const base = (DEFAULT_REFS[k] || []).filter(v => !memeChoix(retires, v));
-      const ajouts = perso.filter(v => !memeChoix(DEFAULT_REFS[k] || [], v));
-      state.refs[k] = dedupeListe(base.concat(ajouts), DEFAULT_REFS[k]);
-    }
-    if (saved.cascades) for (const g in state.cascades){
-      if (saved.cascades[g]) for (const f in saved.cascades[g]){
-        if (Array.isArray(saved.cascades[g][f]) && saved.cascades[g][f].length)
-          state.cascades[g][f] = dedupeListe(saved.cascades[g][f].map(renomme), (DEFAULT_CASCADES[g] || {})[f]);
-      }
-    }
+    fusionnerRefs(saved.refs);
+    fusionnerCascades(saved.cascades);
     if (saved.usage) state.usage = saved.usage;
     if (Array.isArray(saved.typesSimples)) state.typesSimples = dedupeListe(saved.typesSimples, []);
   } catch(e){}
+}
+/* Reconstruit chaque liste : choix livrés avec l'outil (moins ceux retirés volontairement)
+   + les ajouts personnels de la source. Utilisé au démarrage ET à l'import d'une fiche JSON,
+   pour qu'une fiche exportée par une ancienne version n'efface jamais les nouveaux choix. */
+function fusionnerRefs(refsSource){
+  if (!refsSource) return;
+  for (const k in state.refs){
+    if (!Array.isArray(refsSource[k])) continue;
+    const perso = refsSource[k].map(renomme);
+    const retires = Array.isArray((state.retires || {})[k]) ? state.retires[k] : [];
+    const base = (DEFAULT_REFS[k] || []).filter(v => !memeChoix(retires, v));
+    const ajouts = perso.filter(v => !memeChoix(DEFAULT_REFS[k] || [], v)
+      && !memeChoix(state.refs[k] || [], v));
+    state.refs[k] = dedupeListe(base.concat(
+      (state.refs[k] || []).filter(v => !memeChoix(DEFAULT_REFS[k] || [], v)), ajouts), DEFAULT_REFS[k]);
+  }
+}
+function fusionnerCascades(cascSource){
+  if (!cascSource) return;
+  for (const g in cascSource){
+    if (!cascSource[g] || typeof cascSource[g] !== "object") continue;
+    if (!state.cascades[g]) state.cascades[g] = {};
+    for (const f in cascSource[g]){
+      if (!Array.isArray(cascSource[g][f])) continue;
+      const actuelle = state.cascades[g][f] || (DEFAULT_CASCADES[g] || {})[f] || [AD];
+      state.cascades[g][f] = dedupeListe(actuelle.concat(cascSource[g][f].map(renomme)),
+        (DEFAULT_CASCADES[g] || {})[f]);
+    }
+  }
 }
 function cascadeListe(group, key){
   if (!key || key === AD) return [AD];
@@ -1382,7 +1399,7 @@ function download(name, content, type){
 }
 function exportJSON(){
   download("fiche-" + ((state.chantier.nom || state.chantier.adresse || "chantier").slice(0, 40)).replace(/[^\wÀ-ü-]+/g, "_") + ".json",
-    JSON.stringify(state, null, 1), "application/json");
+    JSON.stringify(Object.assign({}, state, { v: APP_VERSION, date: APP_DATE }), null, 1), "application/json");
 }
 /* Réaligne une valeur enregistrée sur l'orthographe de référence de la liste */
 function alignRef(listKey, v, fallback){
@@ -1432,15 +1449,14 @@ function importJSONFile(f){
         id: uid(), nom: z.nom || "", open: true,
         meubles: (z.meubles || []).map(reviveMeuble),
       }));
-      if (d.refs) for (const k in state.refs){
-        if (Array.isArray(d.refs[k]) && d.refs[k].length) state.refs[k] = d.refs[k].slice();
+      /* les listes de la fiche importée ENRICHISSENT les vôtres, elles ne les remplacent plus :
+         une fiche exportée par une ancienne version ne fait donc plus disparaître les nouveaux choix */
+      fusionnerRefs(d.refs);
+      fusionnerCascades(d.cascades);
+      if (d.usage) for (const k in d.usage){
+        if (!state.usage[k]) state.usage[k] = {};
+        for (const v in d.usage[k]) state.usage[k][v] = (state.usage[k][v] || 0) + d.usage[k][v];
       }
-      if (d.cascades) for (const g in state.cascades){
-        if (d.cascades[g]) for (const f2 in d.cascades[g]){
-          if (Array.isArray(d.cascades[g][f2]) && d.cascades[g][f2].length) state.cascades[g][f2] = d.cascades[g][f2].slice();
-        }
-      }
-      if (d.usage) state.usage = d.usage;
       if (Array.isArray(d.typesSimples))
         d.typesSimples.forEach(t => { if (!memeChoix(state.typesSimples, t)) state.typesSimples.push(t); });
       saveRefs();
