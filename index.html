@@ -189,7 +189,7 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
 <script>
 /* ================= CONSTANTES ================= */
 const APP_VERSION = "v9";
-const APP_DATE = "05/11/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
+const APP_DATE = "23/11/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
 /* Stockage : localStorage quand il est accessible (page hébergée, fichier local),
    sinon repli en mémoire pour que l'outil reste utilisable en aperçu sandboxé.
    Dans ce cas, les données vivent le temps de la session : à exporter en JSON ou PDF. */
@@ -301,7 +301,15 @@ const estVerriere = (m) => normKey(m.type) === normKey("Verrière");
 const listeVerre = (m) => estVerriere(m) ? "verreVerriere" : "verreTypes";
 const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette"];
 /* Accès unifié aux déclinaisons de matière : mêmes choix en Caisson et en Façade */
-const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect" };
+const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect",
+  type:"facadeType", remp:"remplissageType", tFour:"tissuFournisseur", tRef:"tissuRef",
+  mTeinte:"miroirTeinte", mPose:"miroirPose", note:"facadeNote", parties:"facadeParties" };
+/* Deuxième façade : mêmes champs, mêmes listes, mêmes déclinaisons */
+const K_FACADE2 = { mat:"facade2Mat", four:"facade2Fournisseur", ref:"facade2Ref", mdf:"facade2MdfFinitions",
+  fin:"facade2Finition", vernis:"facade2VernisType", huile:"facade2HuileTeinte",
+  pFour:"facade2PeintureFournisseur", pRef:"facade2PeintureRef", pAsp:"facade2PeintureAspect",
+  type:"facade2Type", remp:"facade2RemplissageType", tFour:"facade2TissuFournisseur", tRef:"facade2TissuRef",
+  mTeinte:"facade2MiroirTeinte", mPose:"facade2MiroirPose", note:"facade2Note", parties:"facade2Parties" };
 const K_CADRE = { mat:"cadreMat", four:"cadreFournisseur", ref:"cadreRef", mdf:"cadreMdfFinitions", fin:"cadreFinition",
   vernis:"cadreVernisType", huile:"cadreHuileTeinte", pFour:"cadrePeintureFournisseur", pRef:"cadrePeintureRef", pAsp:"cadrePeintureAspect" };
 const K_PDT = { mat:"pdtMat", four:"pdtFournisseur", ref:"pdtRef", mdf:"pdtMdfFinitions", fin:"pdtFinition",
@@ -315,7 +323,13 @@ const newMeuble = () => ({
   caissonConstr: AD, caissonMat: AD, caissonFournisseur: AD, caissonRef: AD, caissonNote: "",
   caissonMdfFinitions: [], caissonFinition: AD, caissonVernisType: AD, caissonHuileTeinte: AD,
   caissonPeintureFournisseur: AD, caissonPeintureRef: AD, caissonPeintureAspect: AD,
-  facadeType: AD, facadeMat: AD, facadeFournisseur: AD, facadeRef: AD, facadeNote: "",
+  facadeType: AD, facadeMat: AD, facadeFournisseur: AD, facadeRef: AD, facadeNote: "", facadeParties: "",
+  facade2: false,
+  facade2Type: AD, facade2Mat: AD, facade2Fournisseur: AD, facade2Ref: AD, facade2Note: "", facade2Parties: "",
+  facade2RemplissageType: AD, facade2TissuFournisseur: AD, facade2TissuRef: AD,
+  facade2MiroirTeinte: AD, facade2MiroirPose: AD,
+  facade2MdfFinitions: [], facade2Finition: AD, facade2VernisType: AD, facade2HuileTeinte: AD,
+  facade2PeintureFournisseur: AD, facade2PeintureRef: AD, facade2PeintureAspect: AD,
   remplissageType: AD, tissuFournisseur: AD, tissuRef: AD, miroirTeinte: AD, miroirPose: AD,
   miroirEp: AD, miroirSpecs: [],
   mdfFinitions: [], finition: AD, vernisType: AD, huileTeinte: AD,
@@ -766,6 +780,39 @@ function declMatiereForm(arr, m, K, rerender){
     arr.push(field("Réf. / décor", makeSelect("matRefs", m[K.ref], v => { m[K.ref] = v; }), "180px"));
   }
 }
+/* Un modèle de façade : type, remplissage, matière et finitions. Appelé une fois par façade
+   (K_FACADE ou K_FACADE2) pour que les deux proposent exactement les mêmes choix. */
+function facadeForm(m, K, rerender, avecParties){
+  const fc = [];
+  if (avecParties){
+    fc.push(field("Parties concernées", el("input", { class: "inp", value: m[K.parties] || "",
+      placeholder: "ex : portes basses, caissons hauts, joues…",
+      oninput: e => { m[K.parties] = e.target.value; } }), "230px"));
+  }
+  if (!estSimple(m)){
+    fc.push(field("Type de façade", makeSelect("facadeTypes", m[K.type], v => { m[K.type] = v; rerender(); }), "190px"));
+    if (m[K.type] === "Cadre + remplissage"){
+      fc.push(field("Type de remplissage", makeSelect("remplissageTypes", m[K.remp],
+        v => { m[K.remp] = v; rerender(); }), "170px"));
+      if (m[K.remp] === "Tissu" || m[K.remp] === "Tapisserie" || m[K.remp] === "Papier peint"){
+        fc.push(field("Fournisseur tissu", makeSelect("tissuFournisseurs", m[K.tFour],
+          v => { m[K.tFour] = v; m[K.tRef] = AD; rerender(); }, "tissuFournisseurs"), "170px"));
+        if (m[K.tFour] !== AD && m[K.tFour] !== "—"){
+          fc.push(field("Réf. " + m[K.tFour], makeSelect(() => cascadeListe("tissus", m[K.tFour]),
+            m[K.tRef], v => { m[K.tRef] = v; }, "tissus." + m[K.tFour]), "180px"));
+        }
+      }
+      if (m[K.remp] === "Miroir"){
+        fc.push(field("Miroir", makeSelect("miroirTeintes", m[K.mTeinte], v => { m[K.mTeinte] = v; }), "140px"));
+        fc.push(field("Pose du miroir", makeSelect("miroirPoses", m[K.mPose], v => { m[K.mPose] = v; }), "150px"));
+      }
+    }
+  }
+  fc.push(field("Matière", makeSelect("facadeMat", m[K.mat], v => { m[K.mat] = v; rerender(); }), "160px"));
+  declMatiereForm(fc, m, K, rerender);
+  fc.push(bulle(m, K.note));
+  return fc;
+}
 function renderCorps(m, rerender){
   const nodes = [];
 
@@ -818,34 +865,24 @@ function renderCorps(m, rerender){
     nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Caisson"), el("div", { class: "grid" }, cc)));
   }
 
-  /* FAÇADE (ou « Matière & finition » pour les types simples) */
+  /* FAÇADE (ou « Matière & finition » pour les types simples) — jusqu'à deux modèles */
   if (!estMiroir(m) && !estPdt(m) && !estCoussin(m)){
-    const fc = [];
-    if (!estSimple(m)){
-      fc.push(field("Type de façade", makeSelect("facadeTypes", m.facadeType, v => { m.facadeType = v; rerender(); }), "190px"));
-      if (m.facadeType === "Cadre + remplissage"){
-        fc.push(field("Type de remplissage", makeSelect("remplissageTypes", m.remplissageType,
-          v => { m.remplissageType = v; rerender(); }), "170px"));
-        if (m.remplissageType === "Tissu" || m.remplissageType === "Tapisserie"){
-          fc.push(field("Fournisseur tissu", makeSelect("tissuFournisseurs", m.tissuFournisseur,
-            v => { m.tissuFournisseur = v; m.tissuRef = AD; rerender(); }, "tissuFournisseurs"), "170px"));
-          if (m.tissuFournisseur !== AD && m.tissuFournisseur !== "—"){
-            fc.push(field("Réf. " + m.tissuFournisseur, makeSelect(() => cascadeListe("tissus", m.tissuFournisseur),
-              m.tissuRef, v => { m.tissuRef = v; }, "tissus." + m.tissuFournisseur), "180px"));
-          }
-        }
-        if (m.remplissageType === "Miroir"){
-          fc.push(field("Miroir", makeSelect("miroirTeintes", m.miroirTeinte, v => { m.miroirTeinte = v; }), "140px"));
-          fc.push(field("Pose du miroir", makeSelect("miroirPoses", m.miroirPose, v => { m.miroirPose = v; }), "150px"));
-        }
-      }
+    const titre = estSimple(m) ? "Matière & finition" : "Façade / matière & finition";
+    const bloc1 = el("div", { class: "bloc" },
+      el("div", { class: "bloc-t" }, titre + (m.facade2 ? " — 1re façade" : "")),
+      el("div", { class: "grid" }, facadeForm(m, K_FACADE, rerender, m.facade2)));
+    /* case pour ajouter un second modèle de façade sur le même agencement */
+    bloc1.appendChild(el("div", { class: "grid" },
+      el("label", { class: "swch", style: "flex:0 0 auto" },
+        el("input", { type: "checkbox", checked: m.facade2,
+          onchange: e => { m.facade2 = e.target.checked; rerender(); } }),
+        el("span", {}, "Deuxième modèle de façade sur cet agencement"))));
+    nodes.push(bloc1);
+    if (m.facade2){
+      nodes.push(el("div", { class: "bloc" },
+        el("div", { class: "bloc-t" }, titre + " — 2e façade"),
+        el("div", { class: "grid" }, facadeForm(m, K_FACADE2, rerender, true))));
     }
-    fc.push(field("Matière", makeSelect("facadeMat", m.facadeMat, v => { m.facadeMat = v; rerender(); }), "160px"));
-    declMatiereForm(fc, m, K_FACADE, rerender);
-    fc.push(bulle(m, "facadeNote"));
-    nodes.push(el("div", { class: "bloc" },
-      el("div", { class: "bloc-t" }, estSimple(m) ? "Matière & finition" : "Façade / matière & finition"),
-      el("div", { class: "grid" }, fc)));
   }
 
   /* PORTE — type de porte puis ferrage ; la matière & finition suit dans son bloc */
@@ -1164,6 +1201,25 @@ function listeAvecRefs(items, refs){
   });
   return box;
 }
+/* Lignes imprimées d'un modèle de façade (identiques pour la 1re et la 2e) */
+function facadePrint(m, K, avecParties){
+  const fl = [];
+  if (avecParties && m[K.parties]) fl.push(pline("Parties", el("span", { class: "p-val" }, m[K.parties])));
+  if (!estSimple(m)){
+    fl.push(pline("Type", fv(m[K.type])));
+    if (m[K.type] === "Cadre + remplissage"){
+      fl.push(pline("Remplissage", fv(m[K.remp])));
+      if (m[K.remp] === "Tissu" || m[K.remp] === "Tapisserie" || m[K.remp] === "Papier peint")
+        fl.push(pline("Tissu", fv(m[K.tFour]), nn(m[K.tFour]) ? [" ", fv(m[K.tRef])] : ""));
+      if (m[K.remp] === "Miroir")
+        fl.push(pline("Miroir", fv(m[K.mTeinte]), " · ", fv(m[K.mPose])));
+    }
+  }
+  fl.push(pline("Matière", fv(m[K.mat])));
+  declMatierePrint(fl, m, K);
+  if (m[K.note]) fl.push(el("div", { class: "p-line p-note" }, "💬 " + m[K.note]));
+  return fl;
+}
 function corpsSections(m){
   const secs = [];
   const sec = (title, lines, full) => { if (lines.length) secs.push(el("div", { class: "p-sec" + (full ? " full" : "") }, el("div", { class: "p-sec-t" }, title), lines)); };
@@ -1203,21 +1259,9 @@ function corpsSections(m){
     sec("Caisson", cl);
   }
   if (!estMiroir(m) && !estPdt(m) && !estCoussin(m)){
-    const fl = [];
-    if (!estSimple(m)){
-      fl.push(pline("Type", fv(m.facadeType)));
-      if (m.facadeType === "Cadre + remplissage"){
-        fl.push(pline("Remplissage", fv(m.remplissageType)));
-        if (m.remplissageType === "Tissu" || m.remplissageType === "Tapisserie")
-          fl.push(pline("Tissu", fv(m.tissuFournisseur), nn(m.tissuFournisseur) ? [" ", fv(m.tissuRef)] : ""));
-        if (m.remplissageType === "Miroir")
-          fl.push(pline("Miroir", fv(m.miroirTeinte), " · ", fv(m.miroirPose)));
-      }
-    }
-    fl.push(pline("Matière", fv(m.facadeMat)));
-    declMatierePrint(fl, m, K_FACADE);
-    if (m.facadeNote) fl.push(el("div", { class: "p-line p-note" }, "💬 " + m.facadeNote));
-    sec(estSimple(m) ? "Matière & finition" : "Façade / matière & finition", fl);
+    const titre = estSimple(m) ? "Matière & finition" : "Façade / matière & finition";
+    sec(titre + (m.facade2 ? " — 1re façade" : ""), facadePrint(m, K_FACADE, m.facade2));
+    if (m.facade2) sec(titre + " — 2e façade", facadePrint(m, K_FACADE2, true));
 
     if (estPorte(m)){
       const pl2 = [ pline("Type", fv(m.porteType)) ];
@@ -1444,6 +1488,7 @@ function reviveMeuble(m){
     pdtMdfFinitions: Array.isArray(m.pdtMdfFinitions) ? m.pdtMdfFinitions : [],
     cadreMdfFinitions: Array.isArray(m.cadreMdfFinitions) ? m.cadreMdfFinitions : [],
     porteVerreSpecs: Array.isArray(m.porteVerreSpecs) ? m.porteVerreSpecs : [],
+    facade2MdfFinitions: Array.isArray(m.facade2MdfFinitions) ? m.facade2MdfFinitions : [],
     simple: (m.simple === true || m.simple === false) ? m.simple : null,
     electroElements: Array.isArray(m.electroElements) ? m.electroElements : [],
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
@@ -1605,6 +1650,7 @@ function sanitizeMeuble(m){
     porteType: ensureRef("porteTypes", m.porteType, AD),
     porteVerreType: ensureRef("porteVerreTypes", m.porteVerreType, AD),
     porteVerreSpecs: Array.isArray(m.porteVerreSpecs) ? m.porteVerreSpecs.filter(x => PORTE_VERRE_SPECS.includes(x)) : [],
+    facade2MdfFinitions: Array.isArray(m.facade2MdfFinitions) ? m.facade2MdfFinitions.filter(x => ["Brut","Apprêté","Peint"].includes(x)) : [],
     ferrage: ensureRef("ferrages", m.ferrage, AD),
     remplissage: !!m.remplissage,
     cadre: !!m.cadre,
@@ -1660,6 +1706,27 @@ function sanitizeMeuble(m){
   out.facadeRef = MAT_CASCADE.includes(out.facadeMat)
     ? ensureCascade("panneaux", out.facadeFournisseur, m.facadeRef, AD)
     : ensureRef("matRefs", m.facadeRef, AD);
+  out.facade2 = !!m.facade2;
+  out.facadeParties = m.facadeParties || "";
+  out.facade2Parties = m.facade2Parties || "";
+  out.facade2Note = m.facade2Note || "";
+  out.facade2Type = ensureRef("facadeTypes", m.facade2Type, AD);
+  out.facade2Mat = ensureRef("facadeMat", m.facade2Mat, AD);
+  out.facade2Fournisseur = ensureRef("fournisseurs", m.facade2Fournisseur, AD);
+  out.facade2Ref = MAT_CASCADE.includes(out.facade2Mat)
+    ? ensureCascade("panneaux", out.facade2Fournisseur, m.facade2Ref, AD)
+    : ensureRef("matRefs", m.facade2Ref, AD);
+  out.facade2RemplissageType = ensureRef("remplissageTypes", m.facade2RemplissageType, AD);
+  out.facade2TissuFournisseur = ensureRef("tissuFournisseurs", m.facade2TissuFournisseur, AD);
+  out.facade2TissuRef = ensureCascade("tissus", out.facade2TissuFournisseur, m.facade2TissuRef, AD);
+  out.facade2MiroirTeinte = ensureRef("miroirTeintes", m.facade2MiroirTeinte, AD);
+  out.facade2MiroirPose = ensureRef("miroirPoses", m.facade2MiroirPose, AD);
+  out.facade2Finition = ensureRef("finitions", m.facade2Finition, AD);
+  out.facade2VernisType = ensureRef("vernisTypes", m.facade2VernisType, AD);
+  out.facade2HuileTeinte = ensureRef("huileTeintes", m.facade2HuileTeinte, AD);
+  out.facade2PeintureFournisseur = ensureRef("peintureFournisseurs", m.facade2PeintureFournisseur, AD);
+  out.facade2PeintureRef = ensureCascade("peintures", out.facade2PeintureFournisseur, m.facade2PeintureRef, AD);
+  out.facade2PeintureAspect = ensureRef("peintureAspects", m.facade2PeintureAspect, AD);
   out.remplissageType = ensureRef("remplissageTypes", m.remplissageType, AD);
   out.tissuFournisseur = ensureRef("tissuFournisseurs", m.tissuFournisseur, AD);
   out.tissuRef = ensureCascade("tissus", out.tissuFournisseur, m.tissuRef, AD);
