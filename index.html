@@ -46,8 +46,10 @@ body{margin:0;min-height:100vh;background:var(--papier);color:var(--encre);font-
 .inp{border:1px solid var(--ligne);border-radius:4px;padding:7px 9px;font:inherit;background:#FDFCF9;color:var(--encre);width:100%}
 .inp:focus{outline:2px solid var(--marron);outline-offset:-1px}
 select.inp.ad-val{color:var(--rouge);font-weight:600}
-textarea.inp{resize:vertical;min-height:60px;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.5}
-.inp.bulle{border-style:dashed;background:#FBF7EE;font-weight:600;color:var(--encre)}
+textarea.inp{resize:vertical;min-height:58px;overflow:hidden;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.5}
+textarea.inp.bulle{min-height:0;overflow:hidden}
+.inp.bulle{border-style:dashed;background:#FBF7EE;font-weight:600;color:var(--encre);
+  font-family:'Public Sans',sans-serif;font-size:13px;line-height:1.45}
 select.inp option.opt-add{font-style:italic;color:var(--marron)}
 .zone{border:1px solid var(--ligne);border-radius:6px;background:var(--carte);margin-bottom:14px;overflow:hidden}
 .zone-head{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--pin);cursor:pointer}
@@ -305,6 +307,13 @@ const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", m
   type:"facadeType", remp:"remplissageType", tFour:"tissuFournisseur", tRef:"tissuRef",
   mTeinte:"miroirTeinte", mPose:"miroirPose", note:"facadeNote", parties:"facadeParties" };
 /* Deuxième façade : mêmes champs, mêmes listes, mêmes déclinaisons */
+/* Poignées : la 1re reste dans les champs d'origine (import de devis, fiches déjà enregistrées),
+   les suivantes vivent dans la liste m.poigneesSup — mêmes clés, donc même rendu. */
+const K_POIGNEE = { type:"poigneeType", ref:"poigneeRef", fin:"poigneeFinition", prise:"poigneePrise",
+  profil:"profilRef", nb:"nbPoignees", note:"poigneeNote", parties:"poigneeParties" };
+const K_POIGNEE_SUP = { type:"type", ref:"ref", fin:"fin", prise:"prise",
+  profil:"profil", nb:"nb", note:"note", parties:"parties" };
+const newPoignee = () => ({ id: uid(), type: AD, ref: "", fin: AD, prise: AD, profil: AD, nb: "", note: "", parties: "" });
 const K_FACADE2 = { mat:"facade2Mat", four:"facade2Fournisseur", ref:"facade2Ref", mdf:"facade2MdfFinitions",
   fin:"facade2Finition", vernis:"facade2VernisType", huile:"facade2HuileTeinte",
   pFour:"facade2PeintureFournisseur", pRef:"facade2PeintureRef", pAsp:"facade2PeintureAspect",
@@ -347,7 +356,8 @@ const newMeuble = () => ({
   pdtPeintureFournisseur: AD, pdtPeintureRef: AD, pdtPeintureAspect: AD, pdtMdfFinitions: [],
   pdtOptions: [], pdtRefs: {}, pdtNote: "",
   electro: false, electroFournisseur: AD, electroElements: [], electroRefs: {}, electroNote: "",
-  poignees: true, poigneeType: AD, poigneeRef: "", poigneeFinition: AD, poigneePrise: AD, profilRef: AD,
+  poignees: true, poigneesSup: [], poigneeParties: "",
+  poigneeType: AD, poigneeRef: "", poigneeFinition: AD, poigneePrise: AD, profilRef: AD,
   bequillageRef: AD, nbPoignees: "", poigneeNote: "",
   tringle: false, tringleFinition: AD,
   led: false, ledCouleur: AD, ledEmpl: AD,
@@ -524,14 +534,32 @@ function el(tag, attrs, ...children){
   children.flat(Infinity).forEach(c => { if (c == null || c === "") return; n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
   return n;
 }
+/* Zone de texte qui s'adapte à ce qu'on écrit : plus besoin de faire défiler pour relire.
+   Appelé à la création (le contenu restauré est déjà là) et à chaque frappe. */
+function autoGrow(node){
+  const fit = () => {
+    try {
+      node.style.height = "auto";
+      const h = node.scrollHeight;
+      if (h) node.style.height = (h + 2) + "px";
+    } catch(e){}
+  };
+  node.addEventListener("input", fit);
+  node.addEventListener("change", fit);
+  /* au moment de la création le champ n'est pas encore dans la page : on mesure juste après */
+  setTimeout(fit, 0);
+  node._fit = fit;
+  return node;
+}
 function field(label, node, width){
   return el("label", { class: "fld" + (width ? " fix" : ""), style: width ? "width:" + width : "" },
     el("span", { class: "fld-l" }, label), node);
 }
 function bulle(m, key){
   return field("💬 Autres possibilités / précisions",
-    el("input", { class: "inp bulle", value: m[key] || "", placeholder: "noter librement d'autres options…",
-      oninput: e => { m[key] = e.target.value; } }));
+    autoGrow(el("textarea", { class: "inp bulle", rows: 1, value: m[key] || "",
+      placeholder: "noter librement d'autres options…",
+      oninput: e => { m[key] = e.target.value; } })));
 }
 function makeSelect(listKeyOrGet, value, onPick, usageKey){
   const getList = typeof listKeyOrGet === "string" ? () => state.refs[listKeyOrGet] : listKeyOrGet;
@@ -640,6 +668,7 @@ function renderChantier(){
   const gen = document.getElementById("c_generalites");
   gen.value = state.generalites;
   gen.oninput = () => { state.generalites = gen.value; };
+  if (!gen._fit) autoGrow(gen); else gen._fit();
   subTitle();
 }
 function renderZones(){
@@ -782,6 +811,43 @@ function declMatiereForm(arr, m, K, rerender){
 }
 /* Un modèle de façade : type, remplissage, matière et finitions. Appelé une fois par façade
    (K_FACADE ou K_FACADE2) pour que les deux proposent exactement les mêmes choix. */
+/* Un modèle de poignée : type et ses déclinaisons. Appelé pour la 1re poignée (champs d'origine)
+   comme pour chaque modèle supplémentaire, afin que tous proposent les mêmes choix. */
+function poigneeForm(h, K, rerender, avecParties){
+  const pc = [];
+  if (avecParties){
+    pc.push(field("Parties concernées", el("input", { class: "inp", value: h[K.parties] || "",
+      placeholder: "ex : portes basses, tiroirs, colonne…",
+      oninput: e => { h[K.parties] = e.target.value; } }), "220px"));
+  }
+  pc.push(field("Type de poignée", makeSelect("poigneeTypes", h[K.type], v => { h[K.type] = v; rerender(); }), "190px"));
+  if (h[K.type] === "Bouton de porte"){
+    pc.push(field("Réf. bouton", makeSelect("boutonRefs", h[K.ref] || AD,
+      v => { h[K.ref] = (v === AD ? "" : v); }, "boutonRefs"), "180px"));
+    pc.push(field("Finition", makeSelect("poigneeFinitions", h[K.fin], v => { h[K.fin] = v; }), "170px"));
+  } else if (h[K.type] === "Push-pull"){
+    pc.push(field("Couleur", makeSelect("pushPullCouleurs", state.refs.pushPullCouleurs.includes(h[K.fin]) ? h[K.fin] : AD,
+      v => { h[K.fin] = v; }), "140px"));
+  } else if (h[K.type] === "Prise de doigt"){
+    pc.push(field("Forme", makeSelect("priseTypes", h[K.prise], v => { h[K.prise] = v; rerender(); }), "150px"));
+    if (h[K.prise] === "Profilé"){
+      pc.push(field("Réf. profilé", makeSelect("profilRefs", h[K.profil], v => { h[K.profil] = v; }), "160px"));
+    }
+    /* pas de finition ni de nombre pour une prise de doigt */
+  } else if (h[K.type] === "Fournie par le client" || h[K.type] === AD || h[K.type] === "—"){
+    /* aucun choix supplémentaire */
+  } else {
+    pc.push(field("Réf. / détail", el("input", { class: "inp", value: h[K.ref] || "",
+      oninput: e => { h[K.ref] = e.target.value; } })));
+    pc.push(field("Finition", makeSelect("poigneeFinitions", h[K.fin], v => { h[K.fin] = v; }), "160px"));
+  }
+  if (h[K.type] !== AD && h[K.type] !== "—" && h[K.type] !== "Prise de doigt"){
+    pc.push(field("Nombre", el("input", { class: "inp mono", value: h[K.nb] || "",
+      oninput: e => { h[K.nb] = e.target.value; } }), "90px"));
+  }
+  pc.push(bulle(h, K.note));
+  return pc;
+}
 function facadeForm(m, K, rerender, avecParties){
   const fc = [];
   if (avecParties){
@@ -978,31 +1044,24 @@ function renderCorps(m, rerender){
       /* sans poignée : rien d'autre à renseigner */
       nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Poignées"), el("div", { class: "grid" }, pc)));
     } else {
-    pc.push(field("Type de poignée", makeSelect("poigneeTypes", m.poigneeType, v => { m.poigneeType = v; rerender(); }), "190px"));
-    if (m.poigneeType === "Bouton de porte"){
-      pc.push(field("Réf. bouton", makeSelect("boutonRefs", m.poigneeRef || AD,
-        v => { m.poigneeRef = (v === AD ? "" : v); }, "boutonRefs"), "180px"));
-      pc.push(field("Finition", makeSelect("poigneeFinitions", m.poigneeFinition, v => { m.poigneeFinition = v; }), "170px"));
-    } else if (m.poigneeType === "Push-pull"){
-      pc.push(field("Couleur", makeSelect("pushPullCouleurs", state.refs.pushPullCouleurs.includes(m.poigneeFinition) ? m.poigneeFinition : AD,
-        v => { m.poigneeFinition = v; }), "140px"));
-    } else if (m.poigneeType === "Prise de doigt"){
-      pc.push(field("Forme", makeSelect("priseTypes", m.poigneePrise, v => { m.poigneePrise = v; rerender(); }), "150px"));
-      if (m.poigneePrise === "Profilé"){
-        pc.push(field("Réf. profilé", makeSelect("profilRefs", m.profilRef, v => { m.profilRef = v; }), "160px"));
-      }
-      /* pas de finition ni de nombre pour une prise de doigt */
-    } else if (m.poigneeType === "Fournie par le client" || m.poigneeType === AD || m.poigneeType === "—"){
-      /* aucun choix supplémentaire */
-    } else {
-      pc.push(field("Réf. / détail", el("input", { class: "inp", value: m.poigneeRef, oninput: e => { m.poigneeRef = e.target.value; } })));
-      pc.push(field("Finition", makeSelect("poigneeFinitions", m.poigneeFinition, v => { m.poigneeFinition = v; }), "160px"));
-    }
-    if (m.poigneeType !== AD && m.poigneeType !== "—" && m.poigneeType !== "Prise de doigt"){
-      pc.push(field("Nombre", el("input", { class: "inp mono", value: m.nbPoignees, oninput: e => { m.nbPoignees = e.target.value; } }), "90px"));
-    }
-    pc.push(bulle(m, "poigneeNote"));
-    nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Poignées"), el("div", { class: "grid" }, pc)));
+      if (!Array.isArray(m.poigneesSup)) m.poigneesSup = [];
+      const plusieurs = m.poigneesSup.length > 0;
+      const bloc = el("div", { class: "bloc" },
+        el("div", { class: "bloc-t" }, "Poignées"),
+        el("div", { class: "grid" }, pc.concat(poigneeForm(m, K_POIGNEE, rerender, plusieurs))));
+      /* modèles supplémentaires : autant que nécessaire */
+      m.poigneesSup.forEach((h, i) => {
+        bloc.appendChild(el("div", { class: "sous-item" },
+          el("div", { class: "bloc-t" }, "Modèle de poignée " + (i + 2)),
+          el("div", { class: "grid" }, poigneeForm(h, K_POIGNEE_SUP, rerender, true).concat(
+            el("button", { class: "btn mini", style: "flex:0 0 auto;align-self:flex-end",
+              onclick: () => { m.poigneesSup = m.poigneesSup.filter(x => x.id !== h.id); rerender(); } }, "× Retirer")))));
+      });
+      bloc.appendChild(el("div", { class: "grid" },
+        el("button", { class: "btn mini", style: "flex:0 0 auto",
+          onclick: () => { m.poigneesSup.push(newPoignee()); rerender(); } },
+          "+ Ajouter un modèle de poignée")));
+      nodes.push(bloc);
     }
 
     if (!SANS_TRINGLE.includes(m.type)){
@@ -1064,19 +1123,19 @@ function renderCorps(m, rerender){
   /* composition / notes (toujours, y compris Miroir : dimensions en composition) */
   nodes.push(el("div", { class: "grid", style: "margin-top:10px" },
     field(estMiroir(m) ? "Composition / dimensions (un miroir par ligne)" : "Composition (une ligne par élément : colonnes, caissons, tiroirs...)",
-      el("textarea", { class: "inp", rows: 3, value: m.composition,
+      autoGrow(el("textarea", { class: "inp", rows: 3, value: m.composition,
         placeholder: estMiroir(m) ? "Miroir salle d'eau L. 1070x H. 1700" : "1 colonne — 3 tiroirs, 4 étagères, 1 porte",
-        oninput: e => { m.composition = e.target.value; } }))));
+        oninput: e => { m.composition = e.target.value; } })))));
   nodes.push(el("div", { class: "grid", style: "margin-top:10px" },
     field("Notes (précisions de fabrication, imprimées sous la composition)",
-      el("textarea", { class: "inp", rows: 2, value: m.notes,
+      autoGrow(el("textarea", { class: "inp", rows: 2, value: m.notes,
         placeholder: "Double fond électricité, chants plaqués, sens du fil...",
-        oninput: e => { m.notes = e.target.value; } }))));
+        oninput: e => { m.notes = e.target.value; } })))));
   nodes.push(el("div", { class: "grid", style: "margin-top:10px" },
     field("⚠ Points d'attention (imprimés en rouge)",
-      el("textarea", { class: "inp", rows: 2, value: m.attention,
+      autoGrow(el("textarea", { class: "inp", rows: 2, value: m.attention,
         placeholder: "Plan de travail hors lot, cotes à confirmer, prévoir renfort...",
-        oninput: e => { m.attention = e.target.value; } }))));
+        oninput: e => { m.attention = e.target.value; } })))));
   return nodes;
 }
 
@@ -1201,6 +1260,23 @@ function listeAvecRefs(items, refs){
   });
   return box;
 }
+/* Ligne imprimée d'un modèle de poignée (identique pour tous les modèles) */
+function poigneePrint(h, K, libelle){
+  const po = el("div", { class: "p-line" }, el("span", { class: "p-lab" }, libelle + " : "));
+  if (h[K.parties]) po.appendChild(el("span", { class: "p-val" }, h[K.parties] + " — "));
+  po.appendChild(fv(h[K.type]));
+  if (h[K.type] === "Prise de doigt"){
+    po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(h[K.prise]));
+    if (h[K.prise] === "Profilé"){ po.appendChild(document.createTextNode(" ")); po.appendChild(fv(h[K.profil])); }
+  }
+  if (nn(h[K.ref])) po.appendChild(el("span", { class: "p-val" }, " — " + h[K.ref]));
+  if (h[K.type] !== "Fournie par le client" && h[K.type] !== "Prise de doigt"
+      && h[K.type] !== AD && h[K.type] !== "—"){
+    po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(h[K.fin]));
+  }
+  if (h[K.nb] && h[K.type] !== "Prise de doigt") po.appendChild(el("span", { class: "p-val" }, " ×" + h[K.nb]));
+  return po;
+}
 /* Lignes imprimées d'un modèle de façade (identiques pour la 1re et la 2e) */
 function facadePrint(m, K, avecParties){
   const fl = [];
@@ -1317,21 +1393,15 @@ function corpsSections(m){
       pl.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Poignées : "),
         el("span", { class: "p-val" }, "Sans poignée")));
     } else {   /* la note de poignée n'est imprimée que si les poignées sont présentes */
-      const po = el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Poignées : "), fv(m.poigneeType));
-      if (m.poigneeType === "Prise de doigt"){
-        po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(m.poigneePrise));
-        if (m.poigneePrise === "Profilé"){ po.appendChild(document.createTextNode(" ")); po.appendChild(fv(m.profilRef)); }
-      }
-      if (nn(m.poigneeRef)) po.appendChild(el("span", { class: "p-val" }, " — " + m.poigneeRef));
-      if (m.poigneeType !== "Fournie par le client" && m.poigneeType !== "Prise de doigt"
-          && m.poigneeType !== AD && m.poigneeType !== "—"){
-        po.appendChild(document.createTextNode(" · ")); po.appendChild(fv(m.poigneeFinition));
-      }
-      if (m.nbPoignees && m.poigneeType !== "Prise de doigt") po.appendChild(el("span", { class: "p-val" }, " ×" + m.nbPoignees));
-      pl.push(po);
+      const sup = Array.isArray(m.poigneesSup) ? m.poigneesSup : [];
+      pl.push(poigneePrint(m, K_POIGNEE, sup.length ? "Poignées 1" : "Poignées"));
+      if (m.poigneeNote) pl.push(el("div", { class: "p-line p-note" }, "💬 " + m.poigneeNote));
+      sup.forEach((h, i) => {
+        pl.push(poigneePrint(h, K_POIGNEE_SUP, "Poignées " + (i + 2)));
+        if (h.note) pl.push(el("div", { class: "p-line p-note" }, "💬 " + h.note));
+      });
     }
     if (m.tringle) pl.push(pline("Tringle", fv(m.tringleFinition)));
-    if (m.poigneeNote && m.poignees !== false) pl.push(el("div", { class: "p-line p-note" }, "💬 " + m.poigneeNote));
     sec("Poignées & tringle", pl);
   }
   /* quincaillerie spéciale : sous les poignées, pour ne pas décaler les blocs habituels */
@@ -1425,6 +1495,14 @@ function compactMeuble(m){
     if (k === "id") continue;
     const v = m[k];
     if (k === "elements"){ const a = (v || []).map(compactMeuble); if (a.length) o.elements = a; continue; }
+    if (k === "poigneesSup"){
+      const a = (v || []).map(h => {
+        const o = {};
+        for (const kk in h) if (kk !== "id" && h[kk] && h[kk] !== AD) o[kk] = h[kk];
+        return o;
+      });
+      if (a.length) o.poigneesSup = a; continue;
+    }
     if (k === "quincailleries"){
       const a = (v || []).map(q => ({ cat: q.cat, detail: q.detail, finition: q.finition, ref: q.ref || "" }));
       if (a.length) o.quincailleries = a; continue;
@@ -1474,6 +1552,8 @@ function reviveMeuble(m){
   return complete(Object.assign(newMeuble(), m, {
     id: uid(),
     poigneePrise: renomme(m.poigneePrise),
+    poigneesSup: (Array.isArray(m.poigneesSup) ? m.poigneesSup : []).map(h =>
+      Object.assign(newPoignee(), h, { id: uid(), type: renomme(h.type), prise: renomme(h.prise) })),
     poignees: (m.poigneeType === "Sans poignée") ? false : (m.poignees !== false),
     poigneeType: (m.poigneeType === "Sans poignée" || m.poigneeType === undefined) ? AD : m.poigneeType,
     type: alignRef("types", renomme(m.type), AD),
@@ -1752,6 +1832,16 @@ function sanitizeMeuble(m){
     e2.type = ensureRef("elementTypes", x.type, AD);
     return e2;
   });
+  out.poigneeParties = m.poigneeParties || "";
+  out.poigneesSup = (Array.isArray(m.poigneesSup) ? m.poigneesSup : []).map(h => ({
+    id: uid(),
+    type: ensureRef("poigneeTypes", renomme(h.type), AD),
+    ref: h.ref || "",
+    fin: ensureRef("poigneeFinitions", h.fin, AD),
+    prise: ensureRef("priseTypes", renomme(h.prise), AD),
+    profil: ensureRef("profilRefs", h.profil, AD),
+    nb: h.nb || "", note: h.note || "", parties: h.parties || "",
+  }));
   /* ancien choix « Sans poignée » → case décochée */
   if (m.poigneeType === "Sans poignée"){ out.poignees = false; out.poigneeType = AD; }
   else { out.poignees = m.poignees !== false; out.poigneeType = ensureRef("poigneeTypes", m.poigneeType, AD); }
