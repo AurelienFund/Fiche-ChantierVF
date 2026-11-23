@@ -223,7 +223,7 @@ const DEFAULT_REFS = {
   caissonConstr: [AD,"Standard IKEA","Standard à recouper","Sur mesure"],
   caissonMat: [AD,"Mélaminé","Aggloméré plaqué","MDF","Plaqué chêne","Chêne massif","Multiplex / CP","Autre"],
   facadeTypes: [AD,"Simple","Cadre","Cadre + remplissage","Rainurée","Cintrée","Vitrée","Autre"],
-  facadeMat: [AD,"MDF","Pin massif","Plaqué chêne","Chêne massif","Mélaminé","Plaqué bois","Stratifié","CP marine","Autre"],
+  facadeMat: [AD,"MDF","Pin massif","Plaqué chêne","Chêne massif","Mélaminé","Aggloméré plaqué","Plaqué bois","Stratifié","CP marine","Autre"],
   remplissageTypes: [AD,"Tissu","Papier peint","Tapisserie","Cannage","Miroir","Autre"],
   miroirTeintes: [AD,"Clair","Vieilli"],
   miroirPoses: [AD,"Percé","Filmé","Avec cadre"],
@@ -278,7 +278,9 @@ const DEFAULT_CASCADES = {
 };
 const MAT_SANS_FINITION = [AD,"—","Mélaminé","Stratifié","CP marine"];
 /* Matières façade avec cascade fournisseur -> réf (mêmes bases de panneaux) */
-const MAT_CASCADE = ["Mélaminé","Stratifié"];
+const MAT_CASCADE = ["Mélaminé","Aggloméré plaqué","Stratifié"];
+/* Matières qui ont à la fois un décor (fournisseur + réf.) et une finition à appliquer */
+const MAT_CASCADE_ET_FINITION = ["Aggloméré plaqué"];
 /* Choix renommés depuis une version antérieure : l'ancienne valeur est remplacée partout
    (base personnelle, fiche en cours, fiches réimportées) pour éviter les doublons. */
 const RENOMMAGES = { "Pente à 30°": "Pente à 25°", "Portes": "Porte", "portes": "Porte", "PORTES": "Porte" };
@@ -783,7 +785,7 @@ function declMatiereForm(arr, m, K, rerender){
       arr.push(field("Réf. " + m[K.four], makeSelect(() => cascadeListe("panneaux", m[K.four]),
         m[K.ref], v => { m[K.ref] = v; }, "panneaux." + m[K.four]), "170px"));
     }
-    return;
+    if (!MAT_CASCADE_ET_FINITION.includes(mat)) return;   /* mélaminé, stratifié : rien de plus */
   }
   if (mat === AD || mat === "—") return;
   const peinture = () => {
@@ -1230,7 +1232,7 @@ function declMatierePrint(fl, m, K){
   const mat = m[K.mat];
   if (MAT_CASCADE.includes(mat)){
     fl.push(pline("Décor", fv(m[K.four]), nn(m[K.four]) ? [" ", fv(m[K.ref])] : ""));
-    return;
+    if (!MAT_CASCADE_ET_FINITION.includes(mat)) return;   /* mélaminé, stratifié : rien de plus */
   }
   if (mat === AD || mat === "—") return;
   if (mat === "MDF"){
