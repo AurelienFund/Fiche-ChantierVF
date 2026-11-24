@@ -194,7 +194,7 @@ select.inp option.opt-add{font-style:italic;color:var(--marron)}
 <script>
 /* ================= CONSTANTES ================= */
 const APP_VERSION = "v9";
-const APP_DATE = "23/11/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
+const APP_DATE = "24/11/2026";   /* date de la version : sert à vérifier ce qui est en ligne */
 /* Stockage : localStorage quand il est accessible (page hébergée, fichier local),
    sinon repli en mémoire pour que l'outil reste utilisable en aperçu sandboxé.
    Dans ce cas, les données vivent le temps de la session : à exporter en JSON ou PDF. */
@@ -1866,11 +1866,59 @@ function sanitizeMeuble(m){
 
 
 /* ---- Analyse locale par règles (secours sans IA), calée sur les devis de l'atelier ---- */
+/* Cartouche : lu sur l'ensemble du document, car sur une facture d'avancement
+   le bloc client se trouve APRÈS les premiers postes. */
+function liraCartouche(brutes){
+  const c = state.chantier;
+  for (let i = 0; i < brutes.length; i++){
+    const l = brutes[i];
+    /* n° de devis ; une facture d'avancement cite le devis d'origine, qui prime */
+    const d = l.match(/\b((?:DEV|FACT|BC|CDE)[-\s]?\d{6,8}[-\s]?(\d{3,6})(?:[-\s]?V\d+)?)/i);
+    if (d){
+      const num = d[1].replace(/\s+/g, "-");
+      /* on ne remplace que si rien n'est saisi, ou si on trouve le devis d'origine
+         là où l'on n'avait qu'un n° de facture */
+      const vide = !c.devis;
+      const mieux = /^DEV/i.test(num) && !!c.devis && !/^DEV/i.test(c.devis);
+      if (vide || mieux){
+        c.devis = num;
+        if (!c.dossier || mieux) c.dossier = d[2];
+      }
+    }
+    const dt = l.match(/En date du\s*:?\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+    if (dt && !c.date) c.date = dt[3] + "-" + dt[2] + "-" + dt[1];
+    /* adresse du chantier explicite : elle prime sur l'adresse du client */
+    const ac = l.match(/Adresse chantier\s*:?\s*(.*)$/i);
+    if (ac && !c._adrChantier){
+      const suite = ac[1] ? [ac[1]] : [brutes[i+1], brutes[i+2]];
+      c.adresse = suite.filter(x => x && !/^France$/i.test(x)).join(", ");
+      c._adrChantier = true;
+      continue;
+    }
+    /* bloc client : civilité ou forme juridique, puis son adresse sur les lignes suivantes */
+    const cli = l.match(/^((?:Mme|Mlle|M\.|M et Mme|M ?& ?M\.?|SAS|SARL|SCI|EURL|SASU)\s+.{2,60})$/i);
+    if (cli && !c.client){
+      c.client = cli[1].trim();
+      if (!c.nom) c.nom = cli[1].replace(/^(Mme|Mlle|M\.|M et Mme|M ?& ?M\.?|SAS|SARL|SCI|EURL|SASU)\s+/i, "").trim();
+      if (!c._adrChantier){
+        const suite = [brutes[i+1], brutes[i+2]]
+          .filter(x => x && !/^France$/i.test(x) && !/Thomas Trabuc|Siret|^Tel|^Email|^Mobile|Page\s*\d/i.test(x));
+        if (suite.length && !c.adresse) c.adresse = suite.join(", ").replace(/\s{2,}/g, " ");
+      }
+    }
+  }
+  delete c._adrChantier;
+}
 function heuristicParse(text){
+  liraCartouche(text.split(/\n/).map(l => l.trim()).filter(Boolean));
   const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean)
     .filter(l => !/^Page\s+\d+\/\d+/i.test(l))
     .filter(l => !/Siret|Naf\s*:|TVA\s*:|Site internet|Powered by|IBAN|BIC\s*:|Banque\s*:|Libell[ée] du ch[èe]que|Date de validit[ée]|Signature du client|Moyen de r[èe]glement|D[ée]lai de r[èe]glement|Acompte\s*:|Avancement|Reste [àa] facturer|Total net|Montant (total|du march[ée])|rue Fonfrede|^Tel\s*:|^Email\s*:|^Mobile\s*:|Votre contact|^Nom \/ Code|^Avt\b/i.test(l))
-    .filter(l => !/^[-–]?\s*\d[\d\s\u00A0.]*,\d{2}\s*(€|%)?\s*$/.test(l) && l !== "-" && l !== "–");
+    .filter(l => !/^[-–]?\s*\d[\d\s\u00A0.]*,\d{2}\s*(€|%)?\s*$/.test(l) && l !== "-" && l !== "–")
+    /* lignes d'avancement d'une facture : « - 34,00 % 34,00 % 1 737,40 » */
+    .filter(l => !/^[-–\s]*\d{1,3},\d{2}\s*%/.test(l))
+    .map(l => l.replace(/\s+[-–]?\s*\d{1,3},\d{2}\s*%(\s+[-–]?\s*[\d\s\u00A0]*,\d{2}\s*%?)*\s*$/, "").trim())
+    .filter(Boolean);
   const zones = [];
   let zone = null, meuble = null, etage = "", fraisLabel = false;
   const TYPE_MAP = [
@@ -1891,6 +1939,23 @@ function heuristicParse(text){
   const freshMeuble = (code, nom, type) => Object.assign({}, newMeuble(), {
     code: code || "", nom: nomDepuis(nom || ""), type: type || AD,
     quincailleries: [], elements: [], mdfFinitions: [], miroirSpecs: [], composition: "", notes: "", attention: "" });
+  /* Les devis ont deux colonnes (« Nom / Code » puis « Description ») que le lecteur PDF
+     ramène souvent sur une seule ligne, séparées par plusieurs espaces :
+     « 2.1. AG.06.1 DRESSING␣␣AG.06.1 Dressing L. 5830x… »
+     On ne garde que le n° de poste, le code interne et la désignation complète. */
+  const fusionneColonnes = (l) => {
+    if (!/\s{2,}/.test(l)) return l;
+    const parts = l.split(/\s{2,}/).map(s => s.trim()).filter(Boolean)
+      .filter(s => !/^[-–]?\s*\d[\d\s\u00A0]*,\d{2}\s*€?$/.test(s));   /* colonnes de prix */
+    if (parts.length < 2) return parts[0] || l;
+    const gauche = parts[0], droite = parts.slice(1).join(" ");
+    const num = gauche.match(/^(\d{1,2}(?:\.\d+)*\.?)\s/);
+    const codeRe = /\b((?:AG|MR?)\s?\.?\s?\d+(?:\.\d+)*)/i;
+    const cg = gauche.match(codeRe), cd = droite.match(codeRe);
+    if (!num && !cg && !cd) return l;            /* ligne ordinaire : on n'y touche pas */
+    if (!num && !cg) return droite;
+    return [num ? num[1] : "", (!cd && cg) ? cg[1] : "", droite].filter(Boolean).join(" ").trim();
+  };
   const stripPrix = (s) => s.replace(/\s+[-–]?\s*\d{1,3}(?:[\s\u00A0]\d{3})*,\d{2}\s*€?\s*$/, "").trim();
   const dimsOf = (s) => {
     const d = stripPrix(s).match(/L\.\s*±?\s*[\d\/][\dxX±,.\/\s]*(?:P\.\s*±?\s*[\d\/]+\s*x?\s*)?(?:H\.\s*±?\s*[\d\/]+)?(?:\s*x?\s*[ée]p\.?\s*\d+\s*mm)?/);
@@ -1911,7 +1976,7 @@ function heuristicParse(text){
     const m2 = l.match(/^(\d{1,2}(?:\.\d+){1,2})\.?\s+(.+)$/);
     if (!m2) return null;
     const ag = m2[2].match(/^((?:AG|MR?)\s?\.?\s?\d+(?:\.\d+)*)/i);
-    return { code: ag ? ag[1].replace(/\s+/g, "") : m2[1], label: m2[2].trim() };
+    return { code: ag ? ag[1].replace(/\s+/g, "") : m2[1], label: m2[2].trim(), num: m2[1] };
   };
   /* Titre avec code interne sans n° de poste : « M05 - Cuisine … », « AG.01 Bibliothèque bar à vin L. … » */
   const isCodeTitle = (l) => {
@@ -1947,7 +2012,8 @@ function heuristicParse(text){
     } else meuble.finition = "Peint";
   };
 
-  for (const l of lines){
+  for (const lBrute of lines){
+    const l = fusionneColonnes(lBrute);
     /* Niveaux et titres de zones */
     if (/^(RDC|R\+\d|SOUS[- ]SOL|[ÉE]TAGE\s*\d*)$/i.test(l)){ etage = l.toUpperCase(); continue; }
     if (/^AGENCEMENTS?$/i.test(l)) continue;
@@ -1955,18 +2021,8 @@ function heuristicParse(text){
     if (zt){ pushZone(); zone = { id: uid(), nom: zNom(zt), open: true, meubles: [] }; continue; }
 
     if (!zone){
-      /* Avant la 1re zone : infos chantier… sauf si la ligne est déjà un poste (devis sans titres de zones) */
-      const ac = l.match(/Adresse chantier\s*:?\s*(.*)$/i);
-      if (ac){ if (ac[1]) state.chantier.adresse = ac[1]; else state._wa = 2; continue; }
-      if (state._wa){ state.chantier.adresse = (state.chantier.adresse ? state.chantier.adresse + ", " : "") + l; if (--state._wa <= 0) delete state._wa; continue; }
-      const cli = l.match(/^((?:Mme|Mlle|M\.|M et Mme|M ?& ?M\.?|SAS|SARL|SCI|EURL)\s+.{2,60})$/i);
-      if (cli && !state.chantier.client){
-        state.chantier.client = cli[1].trim();
-        state.chantier.nom = state.chantier.nom || cli[1].replace(/^(Mme|Mlle|M\.|M et Mme|M ?& ?M\.?|SAS|SARL|SCI|EURL)\s+/i, "").trim();
-        continue;
-      }
-      const dt = l.match(/En date du\s*:?\s*(\d{2})\/(\d{2})\/(\d{4})/i);
-      if (dt){ state.chantier.date = dt[3] + "-" + dt[2] + "-" + dt[1]; continue; }
+      /* Le cartouche (client, adresse, date, n° de devis) a déjà été lu sur tout le document
+         par liraCartouche() : ici on cherche seulement le premier poste. */
       /* Ligne qui ressemble à un poste alors qu'aucune zone n'a été vue → zone par défaut */
       const ressemblePoste = isItemLabel(l) || isCodeTitle(l)
         || /^([A-Za-zÀ-ü'’\- ]{3,30}?)\s+\1\b/i.test(l)
@@ -1978,6 +2034,15 @@ function heuristicParse(text){
 
     /* Nouveaux postes */
     const item = isItemLabel(l);
+    /* « 5.1 » après des postes « 4.x » sans titre de zone : l'atelier a changé de pièce */
+    if (item && zone && (zone.meubles.length || meuble)){   /* le poste en cours compte aussi */
+      const serie = (item.num || "").split(".")[0];
+      if (serie && zone._serie && serie !== zone._serie){
+        pushZone();
+        zone = { id: uid(), nom: zNom("ZONE " + serie), open: true, meubles: [] };
+      }
+      if (serie && !zone._serie) zone._serie = serie;
+    }
     const codeTitle = item ? null : isCodeTitle(l);
     if (item || codeTitle){
       const it = item || codeTitle;
@@ -1999,6 +2064,7 @@ function heuristicParse(text){
         continue;
       }
       pushMeuble();
+      if (item && zone && !zone._serie) zone._serie = (item.num || "").split(".")[0];
       meuble = freshMeuble(it.code, it.label.replace(/^((?:AG|MR?)\s?\.?\s?\d+(?:\.\d+)*)\s*\.?\s*[-–]?\s*/i, ""), typeOf(it.label));
       const d = dimsOf(l);
       if (d) addCompo(d);
@@ -2038,7 +2104,10 @@ function heuristicParse(text){
     fraisLabel = false;
     const low = l.toLowerCase();
     /* Plomberie / options / variantes → notes, pas de nouveau meuble */
-    if (/^(vasque|cuve|mitigeur)\b/i.test(l)){ addNote(l); continue; }
+    if (/^(vasque|cuve|mitigeur)\b/i.test(l)){
+      if (l.length > 10) addNote(l);     /* « Vasque » seul = titre de colonne, pas une alerte */
+      continue;
+    }
     if (/^en option$/i.test(low)){ addNote("EN OPTION"); continue; }
     if (/^variante/i.test(low)){ addNote("VARIANTE : " + l); continue; }
     if (/mise en peinture/.test(low)){ markPeint(); capteAspect(l); continue; }
@@ -2064,10 +2133,19 @@ function heuristicParse(text){
         let decor = "";
         if (four){
           const iF = l.indexOf(four[1]) + four[1].length, iR = l.indexOf(ref[1]);
-          if (iR > iF) decor = l.slice(iF, iR).replace(/[^A-Za-zÀ-üà-ü' ]/g, " ").replace(/\s+/g, " ").trim();
+          /* le code peut précéder ou suivre le nom du décor : on prend ce qu'il y a entre les deux */
+          const entre = iR > iF ? l.slice(iF, iR) : l.slice(iF).replace(ref[1], "");
+          decor = entre.replace(/[^A-Za-zÀ-üà-ü' ]/g, " ").replace(/\s+/g, " ").trim()
+            .replace(/^(uni|type|mat|brillant)\s+/i, "");
         }
         meuble.caissonRef = (ref[1].replace(/\s/g, "") + (decor ? " " + decor : "")).trim();
       } else if (/evola/i.test(l)){ const ev = l.match(/Evola\s+[A-Za-zÀ-ü]+/i); if (ev) meuble.caissonRef = ev[0]; }
+      else {
+        /* pas de code décor : on garde au moins la couleur annoncée (« mélaminé blanc ») */
+        const coul = l.match(/m[ée]lamin[ée]\s+(?:uni\s+)?(?:type\s+)?(?:Egger|Unilin|Polyrey|Fenix)?\s*([a-zà-ü]+(?:\s+[a-zà-ü]+)?)/i);
+        if (coul && coul[1] && !/^(et|ou|avec|pour|sur|de|du)\b/i.test(coul[1]))
+          meuble.caissonRef = ensureCascade("panneaux", meuble.caissonFournisseur, coul[1].trim(), AD);
+      }
     }
     if (/caissons? standards?/.test(low) && meuble.caissonConstr === AD) meuble.caissonConstr = "Standard à recouper";
     if (/cp marine/.test(low)){
