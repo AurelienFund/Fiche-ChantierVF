@@ -219,16 +219,16 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7
 const deep = (o) => JSON.parse(JSON.stringify(o));
 
 const DEFAULT_REFS = {
-  types: [AD,"Dressing","Bibliothèque","Placard","Cuisine","Îlot","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Étagère","Tablette","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
+  types: [AD,"Dressing","Bibliothèque","Placard","Caisson","Cuisine","Îlot","Plan de travail","Lit superposé","Banquette","Bureau","Salle de bain","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Étagère","Tablette","Tablier","Miroir","Soubassement","Piètement","Manteau de cheminée","Console cache-clim","Autre"],
   elementTypes: [AD,"Tablette","Bureau","Miroir","Piètement"],
   livraisons: [AD,"Monté","Partiellement monté","À plat (démonté)"],
   acces: ["Plain-pied","Escalier","Ascenseur","Monte-charge","Grue nécessaire","Autre"],
   caissonConstr: [AD,"Standard IKEA","Standard à recouper","Sur mesure"],
-  caissonMat: [AD,"Mélaminé","Aggloméré plaqué","MDF","Plaqué chêne","Chêne massif","Multiplex / CP","Autre"],
+  caissonMat: [AD,"Mélaminé","Aggloméré plaqué","MDF","Plaqué chêne","Chêne massif","Multiplex / CP","Miroir","Autre"],
   facadeTypes: [AD,"Simple","Cadre","Cadre + remplissage","Rainurée","Cintrée","Vitrée","Autre"],
-  facadeMat: [AD,"MDF","Pin massif","Plaqué chêne","Chêne massif","Mélaminé","Aggloméré plaqué","Plaqué bois","Stratifié","CP marine","Autre"],
+  facadeMat: [AD,"MDF","Pin massif","Plaqué chêne","Chêne massif","Mélaminé","Aggloméré plaqué","Plaqué bois","Stratifié","Miroir","CP marine","Autre"],
   remplissageTypes: [AD,"Tissu","Papier peint","Tapisserie","Cannage","Miroir","Autre"],
-  miroirTeintes: [AD,"Clair","Vieilli"],
+  miroirTeintes: [AD,"Clair","Vieilli","Rauvisio Mirror"],
   miroirPoses: [AD,"Percé","Filmé","Avec cadre"],
   miroirEps: [AD,"4 mm","6 mm","8 mm"],
   finitions: [AD,"Brut","Peint","Vernis","Huilé (Rubio)"],
@@ -239,7 +239,7 @@ const DEFAULT_REFS = {
   peintureAspects: [AD,"Mat","Satiné","Brillant","Velours"],
   tissuFournisseurs: [AD,"Elitis","Pierre Frey","Casamance"],
   matRefs: [AD],
-  quincSpecTypes: [AD,"Charnière noire","Charnière invisible","Charnière 165°","Rail Hawa escamotable","Rail Hawa coulissant","Système escamotable","Porte-manteau escamotable","Coulissant à galandage","Vérin / piston","Serrure / fermeture","Passe-câble","Autre"],
+  quincSpecTypes: [AD,"Charnière noire","Charnière invisible","Charnière 165°","Rail Hawa escamotable","Rail Hawa coulissant","Système escamotable","Porte-manteau escamotable","Coulissant à galandage","Tiroir push-to-open","Vérin / piston","Serrure / fermeture","Passe-câble","Autre"],
   quincFinitions: [AD,"Nickelé","Noir","Inox","Laiton","Chromé","Gris"],
   pdtMat: [AD,"Dekton","Corian","Marbre","Granit","Quartz","Céramique","Inox","Bois massif","Stratifié","Autre"],
   pdtFournisseurs: [AD,"Granico","HMS","Autre"],
@@ -275,11 +275,12 @@ const DEFAULT_CASCADES = {
     "Charnière noire": [AD], "Charnière invisible": [AD,"Tectus"], "Charnière 165°": [AD],
     "Rail Hawa escamotable": [AD,"Hawa Concepta"], "Rail Hawa coulissant": [AD,"Hawa Junior"],
     "Système escamotable": [AD], "Porte-manteau escamotable": [AD], "Coulissant à galandage": [AD],
+    "Tiroir push-to-open": [AD,"Tip-On","Tip-On Blumotion"],
     "Vérin / piston": [AD], "Serrure / fermeture": [AD], "Passe-câble": [AD], "Autre": [AD],
   },
   planTravail: { "Granico": [AD], "HMS": [AD], "Autre": [AD] },
 };
-const MAT_SANS_FINITION = [AD,"—","Mélaminé","Stratifié","CP marine"];
+const MAT_SANS_FINITION = [AD,"—","Mélaminé","Stratifié","Miroir","CP marine"];
 /* Matières façade avec cascade fournisseur -> réf (mêmes bases de panneaux) */
 const MAT_CASCADE = ["Mélaminé","Aggloméré plaqué","Stratifié"];
 /* Matières qui ont à la fois un décor (fournisseur + réf.) et une finition à appliquer */
@@ -288,27 +289,30 @@ const MAT_CASCADE_ET_FINITION = ["Aggloméré plaqué"];
    (base personnelle, fiche en cours, fiches réimportées) pour éviter les doublons. */
 const RENOMMAGES = { "Pente à 30°": "Pente à 25°", "Portes": "Porte", "portes": "Porte", "PORTES": "Porte" };
 const renomme = (v) => (typeof v === "string" && RENOMMAGES[v]) ? RENOMMAGES[v] : v;
-const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Manteau de cheminée","Console cache-clim","Piètement"];
+const TYPES_SIMPLES = ["Soubassement","Étagère","Tablette","Tablier","Tête de lit","Escalier","Garde-corps","Porte","Verrière","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Manteau de cheminée","Console cache-clim","Piètement"];
 const PDT_OPTIONS = ["Rainurage","Cuve","Robinet","Prises","Plaque"];
 const ELECTRO_ELEMENTS = ["Plaque","Four","Hotte","Frigo","Congélateur","Lave-vaisselle","Micro-ondes","Cafetière","Évier","Cave à vin","Autre"];
 const estPdt = (m) => m.type === "Plan de travail";
 const estCuisine = (m) => normKey(m.type) === normKey("Cuisine") || normKey(m.type) === normKey("Îlot");
 const MIROIR_SPECS = ["Filmé","Perçage","Arrondi","Biseauté","Cadre"];
 /* Sections masquées selon le type d'agencement (cf. arbre des choix) */
-const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Soubassement","Console cache-clim","Tête de lit","Escalier","Garde-corps","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Plan de travail"];
+const SANS_LIVRAISON = ["Miroir","Étagère","Piètement","Manteau de cheminée","Tablette","Tablier","Soubassement","Console cache-clim","Tête de lit","Escalier","Garde-corps","Façade","Habillage","Habillage mural","Coussin / Tapisserie","Plan de travail"];
 const SANS_LED = ["Miroir","Piètement","Manteau de cheminée","Banquette","Plan de travail","Coussin / Tapisserie","Porte"];
 const PORTE_VERRE_SPECS = ["6 mm","8 mm","33²","Feuilleté","Trempé"];
 const SANS_QUINC = ["Miroir","Piètement","Manteau de cheminée","Coussin / Tapisserie"];
 const estCoussin = (m) => normKey(m.type) === normKey("Coussin / Tapisserie");
 const estGardeCorps = (m) => normKey(m.type) === normKey("Garde-corps");
 const estTeteDeLit = (m) => normKey(m.type) === normKey("Tête de lit");
+/* Caisson nu : tout le reste d'un placard, mais pas de façade */
+const SANS_FACADE = ["Caisson"];
+const sansFacade = (m) => memeChoix(SANS_FACADE, m.type) !== undefined;
 const estPorte = (m) => normKey(m.type) === normKey("Porte");
 const estVerriere = (m) => normKey(m.type) === normKey("Verrière");
 /* le verre existe sur le garde-corps (modèle) et sur la verrière (épaisseur / miroir) */
 const listeVerre = (m) => estVerriere(m) ? "verreVerriere" : "verreTypes";
 const SANS_TRINGLE = ["Bibliothèque","Lit superposé","Banquette"];
 /* Accès unifié aux déclinaisons de matière : mêmes choix en Caisson et en Façade */
-const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect",
+const K_FACADE = { mat:"facadeMat", four:"facadeFournisseur", ref:"facadeRef", mdf:"mdfFinitions", fin:"finition", vernis:"vernisType", huile:"huileTeinte", pFour:"peintureFournisseur", pRef:"peintureRef", pAsp:"peintureAspect", mir:"facadeMiroirFin",
   type:"facadeType", remp:"remplissageType", tFour:"tissuFournisseur", tRef:"tissuRef",
   mTeinte:"miroirTeinte", mPose:"miroirPose", note:"facadeNote", parties:"facadeParties" };
 /* Deuxième façade : mêmes champs, mêmes listes, mêmes déclinaisons */
@@ -321,14 +325,14 @@ const K_POIGNEE_SUP = { type:"type", ref:"ref", fin:"fin", prise:"prise",
 const newPoignee = () => ({ id: uid(), type: AD, ref: "", fin: AD, prise: AD, profil: AD, nb: "", note: "", parties: "" });
 const K_FACADE2 = { mat:"facade2Mat", four:"facade2Fournisseur", ref:"facade2Ref", mdf:"facade2MdfFinitions",
   fin:"facade2Finition", vernis:"facade2VernisType", huile:"facade2HuileTeinte",
-  pFour:"facade2PeintureFournisseur", pRef:"facade2PeintureRef", pAsp:"facade2PeintureAspect",
+  pFour:"facade2PeintureFournisseur", pRef:"facade2PeintureRef", pAsp:"facade2PeintureAspect", mir:"facade2MiroirFin",
   type:"facade2Type", remp:"facade2RemplissageType", tFour:"facade2TissuFournisseur", tRef:"facade2TissuRef",
   mTeinte:"facade2MiroirTeinte", mPose:"facade2MiroirPose", note:"facade2Note", parties:"facade2Parties" };
 const K_CADRE = { mat:"cadreMat", four:"cadreFournisseur", ref:"cadreRef", mdf:"cadreMdfFinitions", fin:"cadreFinition",
-  vernis:"cadreVernisType", huile:"cadreHuileTeinte", pFour:"cadrePeintureFournisseur", pRef:"cadrePeintureRef", pAsp:"cadrePeintureAspect" };
+  vernis:"cadreVernisType", huile:"cadreHuileTeinte", pFour:"cadrePeintureFournisseur", pRef:"cadrePeintureRef", pAsp:"cadrePeintureAspect", mir:"cadreMiroirFin" };
 const K_PDT = { mat:"pdtMat", four:"pdtFournisseur", ref:"pdtRef", mdf:"pdtMdfFinitions", fin:"pdtFinition",
-  vernis:"pdtVernisType", huile:"pdtHuileTeinte", pFour:"pdtPeintureFournisseur", pRef:"pdtPeintureRef", pAsp:"pdtPeintureAspect" };
-const K_CAISSON = { mat:"caissonMat", four:"caissonFournisseur", ref:"caissonRef", mdf:"caissonMdfFinitions", fin:"caissonFinition", vernis:"caissonVernisType", huile:"caissonHuileTeinte", pFour:"caissonPeintureFournisseur", pRef:"caissonPeintureRef", pAsp:"caissonPeintureAspect" };
+  vernis:"pdtVernisType", huile:"pdtHuileTeinte", pFour:"pdtPeintureFournisseur", pRef:"pdtPeintureRef", pAsp:"pdtPeintureAspect", mir:"pdtMiroirFin" };
+const K_CAISSON = { mat:"caissonMat", four:"caissonFournisseur", ref:"caissonRef", mdf:"caissonMdfFinitions", fin:"caissonFinition", vernis:"caissonVernisType", huile:"caissonHuileTeinte", pFour:"caissonPeintureFournisseur", pRef:"caissonPeintureRef", pAsp:"caissonPeintureAspect", mir:"caissonMiroirFin" };
 
 const newQuinc = () => ({ id: uid(), cat: AD, detail: AD, finition: AD, ref: "" });
 const newMeuble = () => ({
@@ -338,6 +342,7 @@ const newMeuble = () => ({
   caissonMdfFinitions: [], caissonFinition: AD, caissonVernisType: AD, caissonHuileTeinte: AD,
   caissonPeintureFournisseur: AD, caissonPeintureRef: AD, caissonPeintureAspect: AD,
   facadeType: AD, facadeMat: AD, facadeFournisseur: AD, facadeRef: AD, facadeNote: "", facadeParties: "",
+  facadeMiroirFin: AD, facade2MiroirFin: AD, caissonMiroirFin: AD, cadreMiroirFin: AD, pdtMiroirFin: AD,
   facade2: false,
   facade2Type: AD, facade2Mat: AD, facade2Fournisseur: AD, facade2Ref: AD, facade2Note: "", facade2Parties: "",
   facade2RemplissageType: AD, facade2TissuFournisseur: AD, facade2TissuRef: AD,
@@ -791,6 +796,11 @@ function declMatiereForm(arr, m, K, rerender){
     if (!MAT_CASCADE_ET_FINITION.includes(mat)) return;   /* mélaminé, stratifié : rien de plus */
   }
   if (mat === AD || mat === "—") return;
+  if (normKey(mat) === normKey("Miroir")){
+    arr.push(field("Finition miroir", makeSelect("miroirTeintes", m[K.mir],
+      v => { m[K.mir] = v; }, "miroirTeintes"), "180px"));
+    return;
+  }
   const peinture = () => {
     arr.push(field("Fournisseur peinture", makeSelect("peintureFournisseurs", m[K.pFour],
       v => { m[K.pFour] = v; m[K.pRef] = AD; rerender(); }, "peintureFournisseurs"), "180px"));
@@ -937,7 +947,7 @@ function renderCorps(m, rerender){
   }
 
   /* FAÇADE (ou « Matière & finition » pour les types simples) — jusqu'à deux modèles */
-  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m)){
+  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m) && !sansFacade(m)){
     const titre = estSimple(m) ? "Matière & finition" : "Façade / matière & finition";
     const bloc1 = el("div", { class: "bloc" },
       el("div", { class: "bloc-t" }, titre + (m.facade2 ? " — 1re façade" : "")),
@@ -1238,6 +1248,7 @@ function declMatierePrint(fl, m, K){
     if (!MAT_CASCADE_ET_FINITION.includes(mat)) return;   /* mélaminé, stratifié : rien de plus */
   }
   if (mat === AD || mat === "—") return;
+  if (normKey(mat) === normKey("Miroir")){ fl.push(pline("Finition miroir", fv(m[K.mir]))); return; }
   if (mat === "MDF"){
     fl.push(pline("Finition MDF", m[K.mdf] && m[K.mdf].length ? el("span", { class: "p-val" }, m[K.mdf].join(" + ")) : el("span", { class: "ad" }, AD)));
     if (m[K.mdf] && m[K.mdf].includes("Peint"))
@@ -1339,7 +1350,7 @@ function corpsSections(m){
     if (m.caissonNote) cl.push(el("div", { class: "p-line p-note" }, "💬 " + m.caissonNote));
     sec("Caisson", cl);
   }
-  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m)){
+  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m) && !sansFacade(m)){
     const titre = estSimple(m) ? "Matière & finition" : "Façade / matière & finition";
     sec(titre + (m.facade2 ? " — 1re façade" : ""), facadePrint(m, K_FACADE, m.facade2));
     if (m.facade2) sec(titre + " — 2e façade", facadePrint(m, K_FACADE2, true));
@@ -1779,6 +1790,8 @@ function sanitizeMeuble(m){
   out.caissonFournisseur = ensureRef("fournisseurs", m.caissonFournisseur, AD);
   out.caissonRef = ensureCascade("panneaux", out.caissonFournisseur, m.caissonRef, AD);
   out.caissonFinition = ensureRef("finitions", m.caissonFinition, AD);
+  ["facadeMiroirFin","facade2MiroirFin","caissonMiroirFin","cadreMiroirFin","pdtMiroirFin"]
+    .forEach(k => { out[k] = ensureRef("miroirTeintes", m[k], AD); });
   out.caissonVernisType = ensureRef("vernisTypes", m.caissonVernisType, AD);
   out.caissonHuileTeinte = ensureRef("huileTeintes", m.caissonHuileTeinte, AD);
   out.caissonPeintureFournisseur = ensureRef("peintureFournisseurs", m.caissonPeintureFournisseur, AD);
@@ -2221,6 +2234,8 @@ function heuristicParse(text){
     if (/hawa/.test(low)) addQuinc(/escamotable|concepta/.test(low) ? "Rail Hawa escamotable" : "Rail Hawa coulissant", AD);
     else if (/escamotable/.test(low) && !/prises?|plan de travail/.test(low)) addQuinc("Système escamotable", AD);
     if (/galandage/.test(low)) addQuinc("Coulissant à galandage", AD);
+    if (/push[- ]?to[- ]?open|tip[- ]?on|pousse[- ]?l[âa]che/.test(low) && /tiroir/.test(low))
+      addQuinc("Tiroir push-to-open", /blumotion/.test(low) ? "Tip-On Blumotion" : (/tip[- ]?on/.test(low) ? "Tip-On" : AD));
     if (/charni[èe]re.{0,20}(noir|invisible|165)/.test(low)) addQuinc(
       /noir/.test(low) ? "Charnière noire" : (/invisible|tectus/.test(low) ? "Charnière invisible" : "Charnière 165°"), AD);
     if (/air salin/.test(low)) addNote(l);
