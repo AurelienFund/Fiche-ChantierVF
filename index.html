@@ -372,6 +372,7 @@ const newMeuble = () => ({
   tringle: false, tringleFinition: AD,
   led: false, ledCouleur: AD, ledEmpl: AD,
   composition: "", notes: "", attention: "", simple: null,
+  avecCaisson: null, avecFacade: null,   /* null = selon le type ; true/false = choix manuel */
 });
 /* mode : null = suit les règles du type ; true = simple ; false = détaillé */
 const newElement = (mode) => Object.assign(newMeuble(), { type: AD, simple: (mode === undefined ? null : mode) });
@@ -658,6 +659,12 @@ const estSimple = (m) => (m.simple === true) ? true : (m.simple === false) ? fal
   : memeChoix(TYPES_SIMPLES, m.type) !== undefined
   || memeChoix(state.typesSimples || [], m.type) !== undefined;
 const estMiroir = (m) => m.type === "Miroir";
+/* Caisson et façade : proposés selon le type, mais chaque agencement ou élément peut
+   les activer ou les retirer à la main (cases à cocher en tête de fiche). */
+const caissonParDefaut = (m) => !estSimple(m) && !estMiroir(m) && !estPdt(m) && !estCoussin(m);
+const facadeParDefaut  = (m) => !estMiroir(m) && !estPdt(m) && !estCoussin(m) && !sansFacade(m);
+const aCaisson = (m) => m.avecCaisson === true || (m.avecCaisson !== false && caissonParDefaut(m));
+const aFacade  = (m) => m.avecFacade  === true || (m.avecFacade  !== false && facadeParDefaut(m));
 const matAFinir = (mat) => !MAT_SANS_FINITION.includes(mat);
 
 function subTitle(){
@@ -897,6 +904,16 @@ function facadeForm(m, K, rerender, avecParties){
 function renderCorps(m, rerender){
   const nodes = [];
 
+  /* Choix libre des deux sections principales, quel que soit le type */
+  const bascule = (cle, libelle, parDefaut) => el("label", { class: "swch", style: "flex:0 0 auto" },
+    el("input", { type: "checkbox", checked: (m[cle] === null || m[cle] === undefined) ? parDefaut(m) : m[cle],
+      onchange: e => { m[cle] = e.target.checked; rerender(); } }),
+    el("span", {}, libelle));
+  nodes.push(el("div", { class: "grid", style: "margin-bottom:4px" },
+    el("span", { class: "fld-l", style: "flex:0 0 auto;align-self:center" }, "Sections :"),
+    bascule("avecCaisson", "Caisson", caissonParDefaut),
+    bascule("avecFacade", estSimple(m) ? "Matière & finition" : "Façade", facadeParDefaut)));
+
   /* COUSSIN / TAPISSERIE — matière, modèle et fournisseur, sans finition ni quincaillerie */
   if (estCoussin(m)){
     nodes.push(el("div", { class: "bloc" }, el("div", { class: "bloc-t" }, "Coussin / Tapisserie"),
@@ -929,7 +946,7 @@ function renderCorps(m, rerender){
   }
 
   /* CAISSON */
-  if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
+  if (aCaisson(m)){
     const cc = [ field("Construction", makeSelect("caissonConstr", m.caissonConstr, v => { m.caissonConstr = v; rerender(); }), "190px") ];
     if (m.caissonConstr === "Sur mesure"){
       cc.push(field("Matériau", makeSelect("caissonMat", m.caissonMat, v => { m.caissonMat = v; rerender(); }), "170px"));
@@ -947,7 +964,7 @@ function renderCorps(m, rerender){
   }
 
   /* FAÇADE (ou « Matière & finition » pour les types simples) — jusqu'à deux modèles */
-  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m) && !sansFacade(m)){
+  if (aFacade(m)){
     const titre = estSimple(m) ? "Matière & finition" : "Façade / matière & finition";
     const bloc1 = el("div", { class: "bloc" },
       el("div", { class: "bloc-t" }, titre + (m.facade2 ? " — 1re façade" : "")),
@@ -1339,7 +1356,7 @@ function corpsSections(m){
       m.facadeNote ? el("div", { class: "p-line p-note" }, "💬 " + m.facadeNote) : null,
     ].filter(Boolean));
   }
-  if (!estSimple(m) && !estMiroir(m) && !estPdt(m)){
+  if (aCaisson(m)){
     const cl = [ pline("Construction", fv(m.caissonConstr)) ];
     if (m.caissonConstr === "Sur mesure"){
       cl.push(pline("Matériau", fv(m.caissonMat)));
@@ -1350,7 +1367,7 @@ function corpsSections(m){
     if (m.caissonNote) cl.push(el("div", { class: "p-line p-note" }, "💬 " + m.caissonNote));
     sec("Caisson", cl);
   }
-  if (!estMiroir(m) && !estPdt(m) && !estCoussin(m) && !sansFacade(m)){
+  if (aFacade(m)){
     const titre = estSimple(m) ? "Matière & finition" : "Façade / matière & finition";
     sec(titre + (m.facade2 ? " — 1re façade" : ""), facadePrint(m, K_FACADE, m.facade2));
     if (m.facade2) sec(titre + " — 2e façade", facadePrint(m, K_FACADE2, true));
@@ -1586,6 +1603,8 @@ function reviveMeuble(m){
     porteVerreSpecs: Array.isArray(m.porteVerreSpecs) ? m.porteVerreSpecs : [],
     facade2MdfFinitions: Array.isArray(m.facade2MdfFinitions) ? m.facade2MdfFinitions : [],
     simple: (m.simple === true || m.simple === false) ? m.simple : null,
+    avecCaisson: (m.avecCaisson === true || m.avecCaisson === false) ? m.avecCaisson : null,
+    avecFacade: (m.avecFacade === true || m.avecFacade === false) ? m.avecFacade : null,
     electroElements: Array.isArray(m.electroElements) ? m.electroElements : [],
     electroRefs: (m.electroRefs && typeof m.electroRefs === "object") ? Object.assign({}, m.electroRefs) : {},
   }));
@@ -1764,6 +1783,8 @@ function sanitizeMeuble(m){
     cadrePeintureAspect: ensureRef("peintureAspects", m.cadrePeintureAspect, AD),
     cadreNote: m.cadreNote || "",
     simple: (m.simple === true || m.simple === false) ? m.simple : null,
+    avecCaisson: (m.avecCaisson === true || m.avecCaisson === false) ? m.avecCaisson : null,
+    avecFacade: (m.avecFacade === true || m.avecFacade === false) ? m.avecFacade : null,
     coussinMat: ensureRef("coussinMats", m.coussinMat, AD),
     coussinFournisseur: ensureRef("coussinFournisseurs", m.coussinFournisseur, AD),
     coussinModele: m.coussinModele || "", coussinNote: m.coussinNote || "",
