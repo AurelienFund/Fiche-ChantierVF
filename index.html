@@ -241,7 +241,7 @@ const DEFAULT_REFS = {
   matRefs: [AD],
   quincSpecTypes: [AD,"Charnière noire","Charnière invisible","Charnière 165°","Rail Hawa escamotable","Rail Hawa coulissant","Système escamotable","Porte-manteau escamotable","Coulissant à galandage","Tiroir push-to-open","Vérin / piston","Serrure / fermeture","Passe-câble","Autre"],
   quincFinitions: [AD,"Nickelé","Noir","Inox","Laiton","Chromé","Gris"],
-  pdtMat: [AD,"Dekton","Corian","Marbre","Granit","Quartz","Céramique","Inox","Bois massif","Stratifié","Autre"],
+  pdtMat: [AD,"Dekton","Corian","Marbre","Granit","Quartz","Céramique","Inox","Bois massif","Plaqué chêne","Stratifié","Autre"],
   pdtFournisseurs: [AD,"Granico","HMS","Autre"],
   pdtModeles: [AD],
   pdtEssences: [AD,"Chêne","Hêtre","Frêne","Noyer"],
@@ -767,6 +767,8 @@ function checkboxRowRefs(label, options, m, key, refKey, rerender, ph){
 }
 /* Plan de travail : matière, fournisseur + réf, options d'usinage — mêmes choix partout */
 const estPdtBois = (m) => normKey(m.pdtMat) === normKey("Bois massif");
+/* Plaqué chêne : mêmes déclinaisons de finition que dans les autres sections, sans choix d'essence */
+const estPdtPlaque = (m) => normKey(m.pdtMat) === normKey("Plaqué chêne");
 function planTravailForm(m, rerender){
   const pc = [
     field("Matière", makeSelect("pdtMat", m.pdtMat, v => { m.pdtMat = v; rerender(); }, "pdtMat"), "170px"),
@@ -776,6 +778,10 @@ function planTravailForm(m, rerender){
     pc.push(field("Essence", makeSelect("pdtEssences", m.pdtEssence, v => { m.pdtEssence = v; }, "pdtEssences"), "160px"));
     pc.push(field("Épaisseur", makeSelect("pdtEpBois", m.pdtEp, v => { m.pdtEp = v; }, "pdtEpBois"), "150px"));
     /* mêmes finitions que partout ailleurs : brut / peint (+ réf & aspect) / vernis / huilé (+ teinte) */
+    declMatiereForm(pc, m, K_PDT, rerender);
+  } else if (estPdtPlaque(m)){
+    /* Plaqué chêne : épaisseur de panneau puis les mêmes finitions que dans les autres sections */
+    pc.push(field("Épaisseur", makeSelect("pdtEps", m.pdtEp, v => { m.pdtEp = v; }, "pdtEps"), "150px"));
     declMatiereForm(pc, m, K_PDT, rerender);
   } else {
     /* le modèle se renseigne avant le fournisseur */
@@ -1336,12 +1342,12 @@ function corpsSections(m){
   if (estPdt(m)){
     const pc = [ pline("Matière", fv(m.pdtMat)) ];
     if (estPdtBois(m)) pc.push(pline("Essence", fv(m.pdtEssence)));
-    else {
+    else if (!estPdtPlaque(m)){
       pc.push(pline("Modèle", fv(m.pdtRef)));
       pc.push(pline("Fournisseur", fv(m.pdtFournisseur)));
     }
     pc.push(pline("Épaisseur", fv(m.pdtEp)));
-    if (estPdtBois(m)) declMatierePrint(pc, m, K_PDT);
+    if (estPdtBois(m) || estPdtPlaque(m)) declMatierePrint(pc, m, K_PDT);
     pc.push(el("div", { class: "p-line" }, el("span", { class: "p-lab" }, "Usinages : "),
       m.pdtOptions.length ? listeAvecRefs(m.pdtOptions, m.pdtRefs) : el("span", { class: "ad" }, AD)));
     if (m.pdtNote) pc.push(el("div", { class: "p-line p-note" }, "💬 " + m.pdtNote));
@@ -2220,6 +2226,10 @@ function heuristicParse(text){
     if (/huil[ée]/.test(low)){
       meuble.finition = "Huilé (Rubio)";
       if (/blanchi/.test(low)) meuble.huileTeinte = "White";
+      /* teinte Rubio nommée dans le devis : « huilé Rubio Natural », « huile Smoke » */
+      const rub = l.match(/\b(Pure|White|Natural|Smoke|Black|Chocolate)\b/i);
+      if (rub && meuble.huileTeinte === AD)
+        meuble.huileTeinte = ensureRef("huileTeintes", rub[1][0].toUpperCase() + rub[1].slice(1).toLowerCase(), AD);
       if (/teint[ée]?\s*(fonc[ée]|[àa] confirmer)|teinte [àa] confirmer/.test(low)) addNote(l);
     }
     if (/vernis/.test(low)) meuble.finition = "Vernis";
@@ -2361,8 +2371,12 @@ function heuristicParse(text){
         if (apres && !/^(fourni|pos[ée]|hors|non)/i.test(apres[1]))
           pdtCible.pdtRef = ensureRef("pdtModeles", apres[1].trim(), AD);
       }
+      /* Plaqué chêne : repéré avant le bois massif, car « plaqué chêne » contient « chêne » */
+      if (pdtCible && /plaqu[ée]s?\s+ch[êe]ne|ch[êe]ne\s+plaqu[ée]/i.test(l)){
+        pdtCible.pdtMat = ensureRef("pdtMat", "Plaqué chêne", AD);
+      }
       /* Bois massif : essence à la place du fournisseur */
-      if (pdtCible){
+      if (pdtCible && !estPdtPlaque(pdtCible)){
         const ess = l.match(/\b(ch[êe]ne|h[êe]tre|fr[êe]ne|noyer)\b/i);
         if (ess && /massif|bois/.test(low)){
           const e = normKey(ess[1]);
